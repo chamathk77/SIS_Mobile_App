@@ -8,6 +8,7 @@ import { RootStackParamList } from './RootStackParamsList';
 import AuthenticationScrees from '../screens/loginScreens/AuthenticationScrees';
 import EnterEmailScreen from '../screens/forgot password/EnterEmailScreen';
 import EnterPinScreen from '../screens/forgot password/EnterPinScreen';
+import CreateNewPasswordScreen from '../screens/forgot password/CreateNewPasswordScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -21,6 +22,7 @@ export default function AppNavigator() {
         <Stack.Screen name="AuthenticationScreen" component={AuthenticationScrees} />
         <Stack.Screen name="EnterEmailScreen" component={EnterEmailScreen} />
         <Stack.Screen name="EnterPinScreen" component={EnterPinScreen} />
+        <Stack.Screen name="CreateNewPasswordScreen" component={CreateNewPasswordScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

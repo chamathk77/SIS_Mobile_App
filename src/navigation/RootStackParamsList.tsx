@@ -7,6 +7,7 @@ export type RootStackParamList = {
   //forgot password
   EnterEmailScreen: undefined;
   EnterPinScreen: undefined;
+  CreateNewPasswordScreen: undefined;
   
   
 };

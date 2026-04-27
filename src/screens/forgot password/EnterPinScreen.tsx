@@ -256,7 +256,10 @@ export default function EnterPinScreen({ navigation }: Props) {
               </View>
             </View>
 
-            <TouchableOpacity style={[styles.verifyButton, { backgroundColor: paperTheme.colors.primary,borderRadius: 15 }]}>
+            <TouchableOpacity
+              style={[styles.verifyButton, { backgroundColor: paperTheme.colors.primary, borderRadius: 15 }]}
+              onPress={() => navigation.navigate('CreateNewPasswordScreen')}
+            >
               <Text style={[styles.verifyButtonText, { color: paperTheme.colors.onPrimary, fontSize: 14 }]}>VERIFY &gt;</Text>
             </TouchableOpacity>
 

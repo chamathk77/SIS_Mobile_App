@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Keyboard, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput as PaperTextInput } from 'react-native-paper';
@@ -9,6 +9,7 @@ import React, { useRef } from 'react';
 import { RootStackParamList } from '../../navigation/RootStackParamsList';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import LottieView from 'lottie-react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 const appVersion = require('../../../package.json').version;
 
@@ -23,6 +24,17 @@ export default function LoginScreen({ navigation }: Props) {
   const scrollRef = useRef<any>(null);
   const emailInputRef = useRef<any>(null);
   const passwordInputRef = useRef<any>(null);
+
+
+  useFocusEffect(
+    useCallback(() => {
+      const frameId = requestAnimationFrame(() => {
+        scrollRef.current?.scrollToPosition?.(0, 0, true);
+      });
+
+      return () => cancelAnimationFrame(frameId);
+    }, [])
+  );
 
   const onLogin = () => {
     // if (!email.trim() || !password.trim()) {

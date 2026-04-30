@@ -1,5 +1,15 @@
 import { useCallback, useState } from 'react';
-import { Alert, Keyboard, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput as PaperTextInput } from 'react-native-paper';
 import { fonts } from '../../constants/fonts';
@@ -10,6 +20,10 @@ import { RootStackParamList } from '../../navigation/RootStackParamsList';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import LottieView from 'lottie-react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { login_Service } from '../../services/AuthService';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../store/store';
+import { getDeviceNameForApi } from '../../utils/getDeviceNameForApi';
 
 const appVersion = require('../../../package.json').version;
 
@@ -17,13 +31,19 @@ const appVersion = require('../../../package.json').version;
 type Props = NativeStackScreenProps<RootStackParamList, "LoginScreen">;
 
 export default function LoginScreen({ navigation }: Props) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('sandev.net@gmail.com');
+  const [password, setPassword] = useState('Kalupusa321@');
   const [showPassword, setShowPassword] = useState(false);
   const { paperTheme, resolvedTheme } = useTheme();
   const scrollRef = useRef<any>(null);
   const emailInputRef = useRef<any>(null);
   const passwordInputRef = useRef<any>(null);
+
+  const dispatch = useDispatch<AppDispatch>();
+  const isLoading = useSelector(
+    (state: RootState) => state.AuthReducer.LoginApiState.loading,
+  );
+
 
 
   useFocusEffect(
@@ -36,19 +56,35 @@ export default function LoginScreen({ navigation }: Props) {
     }, [])
   );
 
-  const onLogin = () => {
-    // if (!email.trim() || !password.trim()) {
-    //   Alert.alert('Validation', 'Please enter both institutional email and password.');
-    //   return;
-    // }
+  const onLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Validation', 'Please enter both institutional email and password.');
+      return;
+    }
 
-    // Alert.alert('Login', `Welcome back, ${email}!`);
-    Keyboard.dismiss();
-    navigation.navigate('AuthenticationScreen');
+    const loginData = {
+      email: email,
+      password: password,
+      device_name: getDeviceNameForApi(),
+    };
+
+    try {
+      console.log('loginData', loginData);
+      const result = await dispatch(login_Service(loginData)).unwrap();
+      console.log('result', result);
+    } catch (error) {
+      console.log('error', error);
+      Alert.alert('Error', 'An error occurred while logging in. Please try again.');
+    }
   };
 
   return (
     <>
+      <Modal visible={isLoading} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={paperTheme.colors.primary} />
+        </View>
+      </Modal>
       <StatusBar
         barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={paperTheme.colors.background}
@@ -139,8 +175,19 @@ export default function LoginScreen({ navigation }: Props) {
                 <Text style={[styles.forgotPassword, { color: paperTheme.colors.onSurfaceVariant, borderBottomWidth: 0.3, borderBottomColor: paperTheme.colors.onSurfaceVariant }]}>Forgot Password ?</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.button, { backgroundColor: paperTheme.colors.primary, borderRadius: 15 }]} onPress={onLogin}>
-                <Text style={[styles.buttonText, { color: paperTheme.colors.onPrimary, fontSize: 14 }]}>SIGN IN &gt;</Text>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  { backgroundColor: paperTheme.colors.primary, borderRadius: 15 },
+                  isLoading && styles.buttonDisabled,
+                ]}
+                onPress={onLogin}
+                disabled={isLoading}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.buttonText, { color: paperTheme.colors.onPrimary, fontSize: 14 }]}>
+                  SIGN IN &gt;
+                </Text>
               </TouchableOpacity>
 
               <View style={styles.dividerRow}>
@@ -254,6 +301,9 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 3,
   },
+  buttonDisabled: {
+    opacity: 0.75,
+  },
   buttonText: {
     fontFamily: fonts.PoppinsBold,
     color: '#ffffff',
@@ -303,5 +353,11 @@ const styles = StyleSheet.create({
   lottie: {
     width: 220,
     height: 300,
+  },
+  loadingOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
 });

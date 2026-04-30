@@ -5,7 +5,7 @@ import axios, {
 } from 'axios';
 
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_BASE_URL ||
+  process.env.EXPO_PUBLIC_BASE_URL || 
   process.env.BASE_URL ||
   'https://sis.zuselab.dev/api/v1';
 

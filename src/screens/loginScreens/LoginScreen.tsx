@@ -24,6 +24,7 @@ import { login_Service } from '../../services/AuthService';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../store/store';
 import { getDeviceNameForApi } from '../../utils/getDeviceNameForApi';
+import { devError, devLog } from '../../utils/devLog';
 
 const appVersion = require('../../../package.json').version;
 
@@ -69,11 +70,11 @@ export default function LoginScreen({ navigation }: Props) {
     };
 
     try {
-      console.log('loginData', loginData);
+     devLog('loginData', loginData);
       const result = await dispatch(login_Service(loginData)).unwrap();
-      console.log('result', result);
+      devLog('result', result);
     } catch (error) {
-      console.log('error', error);
+      devError('error', error);
       Alert.alert('Error', 'An error occurred while logging in. Please try again.');
     }
   };

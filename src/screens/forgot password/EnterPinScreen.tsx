@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, Platform, Pressable, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Keyboard, Platform, Pressable, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fonts } from '../../constants/fonts';
 import { useTheme } from '../../context/ThemeContext';
@@ -9,12 +9,16 @@ import { RootStackParamList } from '../../navigation/RootStackParamsList';
 import CommonHeader from '../../components/CommonHeader/CommonHeader';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import LottieView from 'lottie-react-native';
+import { devError, devLog } from '../../utils/devLog';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../store/store';
+import { ForgotPassword_EnterPin_Service } from '../../services/AuthService';
 
 type Props = NativeStackScreenProps<RootStackParamList, "EnterPinScreen">;
 
 export default function EnterPinScreen({ navigation }: Props) {
   const [pin, setPin] = useState('');
-
+  const dispatch = useDispatch<AppDispatch>();
   const timerDuration = 360;
   const [timer, setTimer] = useState(timerDuration);
   const [forceFocus, setForceFocus] = useState(0);
@@ -31,10 +35,7 @@ export default function EnterPinScreen({ navigation }: Props) {
 
   const { paperTheme, resolvedTheme } = useTheme();
 
-
-  const handlePinPress = () => {
-    hiddenInputRef.current?.focus();
-  };
+  const email = useSelector((state: RootState) => state.AuthReducer.ForgotPasswordEnterEmail.email);
 
   const formatTime = () => {
     const minutes = Math.floor(timer / 60);
@@ -84,6 +85,28 @@ export default function EnterPinScreen({ navigation }: Props) {
   }, [timerDuration]);
 
 
+
+  const onPressVerifyPin = async () => {
+    console.log("onPressVerifyPin", pin);
+
+    try {
+      const forgotPasswordData = {
+        email: email,
+        code: pin,
+      };
+
+      const result = await dispatch(ForgotPassword_EnterPin_Service(forgotPasswordData)).unwrap();
+      devLog('result', result);
+      if (result.success) {
+        navigation.navigate('CreateNewPasswordScreen');
+      } else {
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      devError('error', error);
+      Alert.alert('Error', error.message);
+    }
+  }
 
   return (
     <>
@@ -258,7 +281,7 @@ export default function EnterPinScreen({ navigation }: Props) {
 
             <TouchableOpacity
               style={[styles.verifyButton, { backgroundColor: paperTheme.colors.primary, borderRadius: 15 }]}
-              onPress={() => navigation.navigate('CreateNewPasswordScreen')}
+              onPress={() => onPressVerifyPin()}
             >
               <Text style={[styles.verifyButtonText, { color: paperTheme.colors.onPrimary, fontSize: 14 }]}>VERIFY &gt;</Text>
             </TouchableOpacity>

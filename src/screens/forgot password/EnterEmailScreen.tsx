@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Image, Platform, Pressable, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+    ActivityIndicator,
+    Alert,
+    Modal,
+    Platform,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput as PaperTextInput } from 'react-native-paper';
 import { useTheme } from '../../context/ThemeContext';
@@ -9,14 +19,55 @@ import { RootStackParamList } from '../../navigation/RootStackParamsList';
 import CommonHeader from '../../components/CommonHeader/CommonHeader';
 import LottieView from 'lottie-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { AppDispatch, RootState } from '../../store/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { ForgotPassword_EnterEmail_Service } from '../../services/AuthService';
+import { devError, devLog } from '../../utils/devLog';
+import { setForgotPasswordEmail } from '../../store/reducers/AuthReducer';
 
 type Props = NativeStackScreenProps<RootStackParamList, "EnterEmailScreen">;
 
 export default function EnterEmailScreen({ navigation }: Props) {
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState('sandev.net@gmail.com');
     const { resolvedTheme, paperTheme } = useTheme();
+    const dispatch = useDispatch<AppDispatch>();
+    const isLoading = useSelector(
+        (state: RootState) => state.AuthReducer.ForgotPasswordEnterEmail.loading,
+    );
+  
+    const onPressSendRecoveryPIN = async () => {
+        try {
+            if (!email.trim()) {
+                Alert.alert('Validation', 'Please enter your email address');
+                return;
+            }
+
+            const forgotPasswordData = {
+                email: email,
+            };
+
+            const result = await dispatch(ForgotPassword_EnterEmail_Service(forgotPasswordData)).unwrap();
+            devLog('result', result);
+
+            dispatch(setForgotPasswordEmail(email));
+            if (result.success) {
+                navigation.navigate('EnterPinScreen');
+            } else {
+                Alert.alert('Error', result.message);
+            }
+        } catch (error) {
+            devError('error', error);
+            Alert.alert('Error', error.message);
+        }
+    }
+
     return (
         <>
+            <Modal visible={isLoading} transparent animationType="fade" statusBarTranslucent>
+                <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color={paperTheme.colors.primary} />
+                </View>
+            </Modal>
             <StatusBar
                 barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
                 backgroundColor={paperTheme.colors.background}
@@ -72,8 +123,9 @@ export default function EnterEmailScreen({ navigation }: Props) {
                                 />
                             </View>
 
-                            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: paperTheme.colors.primary }]}
-                                onPress={() => navigation.navigate('EnterPinScreen')}
+                            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: paperTheme.colors.primary }, isLoading && styles.buttonDisabled]}
+                                onPress={onPressSendRecoveryPIN}
+                                disabled={isLoading}
                             >
                                 <Text style={styles.primaryButtonText}>Send Recovery PIN  &gt;</Text>
                             </TouchableOpacity>
@@ -205,6 +257,15 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         fontSize: 18,
         letterSpacing: 1,
+    },
+    buttonDisabled: {
+        opacity: 0.75,
+    },
+    loadingOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.35)',
     },
     backToLogin: {
         marginTop: 18,

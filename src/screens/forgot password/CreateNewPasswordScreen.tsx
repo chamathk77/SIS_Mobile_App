@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput as PaperTextInput } from 'react-native-paper';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -8,6 +8,10 @@ import CommonHeader from '../../components/CommonHeader/CommonHeader';
 import { RootStackParamList } from '../../navigation/RootStackParamsList';
 import { useTheme } from '../../context/ThemeContext';
 import { fonts } from '../../constants/fonts';
+import { devError, devLog } from '../../utils/devLog';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../store/store';
+import { ForgotPassword_CreateNewPassword_Service } from '../../services/AuthService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateNewPasswordScreen'>;
 
@@ -17,6 +21,32 @@ export default function CreateNewPasswordScreen({ navigation }: Props) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const email = useSelector((state: RootState) => state.AuthReducer.ForgotPasswordEnterEmail.email);
+  const reset_token = useSelector((state: RootState) => state.AuthReducer.ForgotPasswordEnterPin.reset_token);
+  
+  const onPressResetPassword = async () => {
+    try {
+      const forgotPasswordData = {
+        email: email,
+        reset_token: reset_token,
+        password: password,
+        password_confirmation: confirmPassword,
+      };
+      const result = await dispatch(ForgotPassword_CreateNewPassword_Service(forgotPasswordData)).unwrap();
+      devLog('result', result);
+      if (result.success) {
+        navigation.navigate('LoginScreen');
+      } else {
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      devError('error', error);
+      Alert.alert('Error', error.message);
+      
+    }
+  }
 
   return (
     <>
@@ -95,7 +125,9 @@ export default function CreateNewPasswordScreen({ navigation }: Props) {
               />
             </View>
 
-            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: paperTheme.colors.primary }]}>
+            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: paperTheme.colors.primary }]} 
+            onPress={ onPressResetPassword }
+            >
               <Text style={[styles.primaryButtonText, { color: paperTheme.colors.onPrimary }]}>RESET PASSWORD &gt;</Text>
             </TouchableOpacity>
           </View>

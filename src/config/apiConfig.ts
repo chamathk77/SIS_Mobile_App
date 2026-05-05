@@ -3,6 +3,7 @@ import axios, {
   AxiosInstance,
   InternalAxiosRequestConfig,
 } from 'axios';
+import { ensureInternetConnection } from '../utils/checkInternetConnection';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_BASE_URL || 
@@ -47,6 +48,13 @@ export const apiClient: AxiosInstance = axios.create({
     Accept: 'application/json',
   },
 });
+
+apiClient.interceptors.request.use(
+  async (config: InternalAxiosRequestConfig) => {
+    await ensureInternetConnection();
+    return config;
+  },
+);
 
 if (__DEV__) {
   apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {

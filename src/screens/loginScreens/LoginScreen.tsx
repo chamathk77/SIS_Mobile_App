@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   Modal,
   Platform,
   StatusBar,
@@ -9,31 +10,30 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { TextInput as PaperTextInput } from 'react-native-paper';
-import { fonts } from '../../constants/fonts';
-import { useTheme } from '../../context/ThemeContext';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import React, { useRef } from 'react';
-import { RootStackParamList } from '../../navigation/RootStackParamsList';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import LottieView from 'lottie-react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { login_Service } from '../../services/AuthService';
-import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '../../store/store';
-import { getDeviceNameForApi } from '../../utils/getDeviceNameForApi';
-import { devError, devLog } from '../../utils/devLog';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { TextInput as PaperTextInput } from "react-native-paper";
+import { fonts } from "../../constants/fonts";
+import { useTheme } from "../../context/ThemeContext";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import React, { useRef } from "react";
+import { RootStackParamList } from "../../navigation/RootStackParamsList";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import LottieView from "lottie-react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { login_Service } from "../../services/AuthService";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../../store/store";
+import { getDeviceNameForApi } from "../../utils/getDeviceNameForApi";
+import { devError, devLog } from "../../utils/devLog";
 
-const appVersion = require('../../../package.json').version;
-
+const appVersion = require("../../../package.json").version;
 
 type Props = NativeStackScreenProps<RootStackParamList, "LoginScreen">;
 
 export default function LoginScreen({ navigation }: Props) {
-  const [email, setEmail] = useState('sandev.net@gmail.com');
-  const [password, setPassword] = useState('Kalupusa321@');
+  const [email, setEmail] = useState("sandev.net@gmail.com");
+  const [password, setPassword] = useState("Kalupusa321@");
   const [showPassword, setShowPassword] = useState(false);
   const { paperTheme, resolvedTheme } = useTheme();
   const scrollRef = useRef<any>(null);
@@ -42,10 +42,8 @@ export default function LoginScreen({ navigation }: Props) {
 
   const dispatch = useDispatch<AppDispatch>();
   const isLoading = useSelector(
-    (state: RootState) => state.AuthReducer.LoginApiState.loading,
+    (state: RootState) => state.AuthReducer.Login.loading,
   );
-
-
 
   useFocusEffect(
     useCallback(() => {
@@ -54,12 +52,15 @@ export default function LoginScreen({ navigation }: Props) {
       });
 
       return () => cancelAnimationFrame(frameId);
-    }, [])
+    }, []),
   );
 
   const onLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Validation', 'Please enter both institutional email and password.');
+      Alert.alert(
+        "Validation",
+        "Please enter both institutional email and password.",
+      );
       return;
     }
 
@@ -70,28 +71,48 @@ export default function LoginScreen({ navigation }: Props) {
     };
 
     try {
-     devLog('loginData', loginData);
-      const result = await dispatch(login_Service(loginData)).unwrap();
-      devLog('result', result);
+       devLog('loginData', loginData);
+        const result = await dispatch(login_Service(loginData)).unwrap();
+        devLog('result', result);
+        if (result.success) {
+          Alert.alert('Login', `Welcome back, ${email}!`);
+          Keyboard.dismiss();
+          scrollRef.current?.scrollToPosition?.(0, 0, true);
+          navigation.navigate('AuthenticationScreen');
+        }
+      // navigation.navigate("AuthenticationScreen");
     } catch (error) {
-      devError('error', error);
-      Alert.alert('Error', 'An error occurred while logging in. Please try again.');
+      devError("error", error);
+      Alert.alert(
+        "Error",
+        error.message,
+      );
     }
   };
 
   return (
     <>
-      <Modal visible={isLoading} transparent animationType="fade" statusBarTranslucent>
+      <Modal
+        visible={isLoading}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={paperTheme.colors.primary} />
         </View>
       </Modal>
       <StatusBar
-        barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
+        barStyle={resolvedTheme === "dark" ? "light-content" : "dark-content"}
         backgroundColor={paperTheme.colors.background}
         translucent={false}
       />
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]}>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { backgroundColor: paperTheme.colors.background },
+        ]}
+      >
         <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollViewContent}
           bounces={false}
@@ -99,7 +120,7 @@ export default function LoginScreen({ navigation }: Props) {
           enableOnAndroid={true}
           enableAutomaticScroll={true}
           enableResetScrollToCoords={false}
-          extraScrollHeight={Platform.OS === 'ios' ? 20 : 50}
+          extraScrollHeight={Platform.OS === "ios" ? 20 : 50}
           keyboardOpeningTime={0}
           keyboardShouldPersistTaps="handled"
           resetScrollToCoords={{ x: 0, y: 0 }}
@@ -111,18 +132,42 @@ export default function LoginScreen({ navigation }: Props) {
         >
           <View style={styles.lottieContainer}>
             <LottieView
-              source={require('../../Lottie/Student_Lottie.json')}
+              source={require("../../Lottie/Student_Lottie.json")}
               autoPlay
               loop
               style={styles.lottie}
             />
           </View>
-          <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
+          <View
+            style={[
+              styles.container,
+              { backgroundColor: paperTheme.colors.background },
+            ]}
+          >
             <View>
-              <Text style={[styles.heading, { color: paperTheme.colors.onSurface }]}>Sign In</Text>
-              <Text style={[styles.subheading, { color: paperTheme.colors.onSurfaceVariant }]}>Please provide your academic credentials.</Text>
+              <Text
+                style={[styles.heading, { color: paperTheme.colors.onSurface }]}
+              >
+                Sign In
+              </Text>
+              <Text
+                style={[
+                  styles.subheading,
+                  { color: paperTheme.colors.onSurfaceVariant },
+                ]}
+              >
+                Please provide your academic credentials.
+              </Text>
 
-              <Text style={[styles.label, { color: paperTheme.colors.onSurfaceVariant }]}> EMAIL</Text>
+              <Text
+                style={[
+                  styles.label,
+                  { color: paperTheme.colors.onSurfaceVariant },
+                ]}
+              >
+                {" "}
+                EMAIL
+              </Text>
               <View style={styles.inputWrapper}>
                 <PaperTextInput
                   ref={emailInputRef}
@@ -144,7 +189,14 @@ export default function LoginScreen({ navigation }: Props) {
               </View>
 
               <View style={styles.passwordRow}>
-                <Text style={[styles.label, { color: paperTheme.colors.onSurfaceVariant }]}>PASSWORD</Text>
+                <Text
+                  style={[
+                    styles.label,
+                    { color: paperTheme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  PASSWORD
+                </Text>
               </View>
 
               <View style={[styles.inputWrapper]}>
@@ -158,7 +210,7 @@ export default function LoginScreen({ navigation }: Props) {
                   // left={<PaperTextInput.Icon icon="lock-outline" />}
                   right={
                     <PaperTextInput.Icon
-                      icon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      icon={showPassword ? "eye-off-outline" : "eye-outline"}
                       onPress={() => setShowPassword((prev) => !prev)}
                     />
                   }
@@ -172,28 +224,57 @@ export default function LoginScreen({ navigation }: Props) {
                 />
               </View>
 
-              <TouchableOpacity style={styles.forgotPasswordContainer} onPress={() => navigation.navigate('EnterEmailScreen')}>
-                <Text style={[styles.forgotPassword, { color: paperTheme.colors.onSurfaceVariant, borderBottomWidth: 0.3, borderBottomColor: paperTheme.colors.onSurfaceVariant }]}>Forgot Password ?</Text>
+              <TouchableOpacity
+                style={styles.forgotPasswordContainer}
+                onPress={() => navigation.navigate("EnterEmailScreen")}
+              >
+                <Text
+                  style={[
+                    styles.forgotPassword,
+                    {
+                      color: paperTheme.colors.onSurfaceVariant,
+                      borderBottomWidth: 0.3,
+                      borderBottomColor: paperTheme.colors.onSurfaceVariant,
+                    },
+                  ]}
+                >
+                  Forgot Password ?
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[
                   styles.button,
-                  { backgroundColor: paperTheme.colors.primary, borderRadius: 15 },
+                  {
+                    backgroundColor: paperTheme.colors.primary,
+                    borderRadius: 15,
+                  },
                   isLoading && styles.buttonDisabled,
                 ]}
                 onPress={onLogin}
                 disabled={isLoading}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.buttonText, { color: paperTheme.colors.onPrimary, fontSize: 14 }]}>
+                <Text
+                  style={[
+                    styles.buttonText,
+                    { color: paperTheme.colors.onPrimary, fontSize: 14 },
+                  ]}
+                >
                   SIGN IN &gt;
                 </Text>
               </TouchableOpacity>
 
               <View style={styles.dividerRow}>
                 <View style={styles.divider} />
-                <Text style={[styles.dividerText, { color: paperTheme.colors.onSurfaceVariant }]}>INSTITUTIONAL ACCESS ONLY</Text>
+                <Text
+                  style={[
+                    styles.dividerText,
+                    { color: paperTheme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  INSTITUTIONAL ACCESS ONLY
+                </Text>
                 <View style={styles.divider} />
               </View>
 
@@ -202,7 +283,14 @@ export default function LoginScreen({ navigation }: Props) {
               </Text> */}
             </View>
 
-            <Text style={[styles.encryptionText, { color: paperTheme.colors.onSurfaceVariant }]}>APP VERSION {appVersion}</Text>
+            <Text
+              style={[
+                styles.encryptionText,
+                { color: paperTheme.colors.onSurfaceVariant },
+              ]}
+            >
+              APP VERSION {appVersion}
+            </Text>
           </View>
         </KeyboardAwareScrollView>
       </SafeAreaView>
@@ -213,7 +301,7 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#eeedf5',
+    backgroundColor: "#eeedf5",
   },
   scrollViewContent: {
     flexGrow: 1,
@@ -227,76 +315,75 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: fonts.PoppinsBold,
     fontSize: 30,
-    color: '#171717',
+    color: "#171717",
     marginBottom: 8,
   },
   subheading: {
     fontFamily: fonts.InterRegular,
     fontSize: 15,
-    color: '#52525b',
+    color: "#52525b",
     marginBottom: 30,
   },
   label: {
     fontFamily: fonts.PoppinsSemiBold,
     fontSize: 12,
-    color: '#52525b',
+    color: "#52525b",
     letterSpacing: 2.1,
     marginBottom: 8,
   },
   inputWrapper: {
     height: 66,
-    backgroundColor: '#ececf1',
+    backgroundColor: "#ececf1",
     borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 14,
     marginBottom: 20,
   },
   inputIcon: {
     fontFamily: fonts.PoppinsBold,
     fontSize: 30,
-    color: '#57534e',
+    color: "#57534e",
     marginRight: 12,
     width: 26,
-    alignItems: 'center',
+    alignItems: "center",
   },
   input: {
     flex: 1,
     fontFamily: fonts.InterRegular,
     fontSize: 16,
-    color: '#18181b',
-    backgroundColor: 'transparent',
+    color: "#18181b",
+    backgroundColor: "transparent",
   },
   inputContent: {
     fontFamily: fonts.InterRegular,
     fontSize: 17,
-    color: '#18181b',
-
+    color: "#18181b",
   },
   passwordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   forgotPassword: {
     fontFamily: fonts.PoppinsMedium,
     fontSize: 12,
-    color: '#a16207',
+    color: "#a16207",
   },
   forgotPasswordContainer: {
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     marginTop: -12,
     marginBottom: 8,
   },
   button: {
     height: 60,
-    backgroundColor: '#c48d00',
+    backgroundColor: "#c48d00",
     borderRadius: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 18,
     marginBottom: 26,
-    shadowColor: '#6b4f00',
+    shadowColor: "#6b4f00",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
     shadowRadius: 15,
@@ -307,47 +394,47 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: fonts.PoppinsBold,
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 14,
     letterSpacing: 3,
   },
   dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 26,
   },
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e4e4e7',
+    backgroundColor: "#e4e4e7",
   },
   dividerText: {
     fontFamily: fonts.PoppinsMedium,
     fontSize: 10,
-    color: '#9a9aa4',
+    color: "#9a9aa4",
     letterSpacing: 1.2,
     marginHorizontal: 10,
   },
   registerText: {
     fontFamily: fonts.InterRegular,
     fontSize: 14,
-    color: '#3f3f46',
-    textAlign: 'center',
+    color: "#3f3f46",
+    textAlign: "center",
   },
   registerLink: {
     fontFamily: fonts.InterBold,
-    color: '#8a6500',
+    color: "#8a6500",
   },
   encryptionText: {
     fontFamily: fonts.PoppinsMedium,
     fontSize: 10,
-    color: '#9a9aa4',
-    textAlign: 'center',
+    color: "#9a9aa4",
+    textAlign: "center",
     letterSpacing: 3,
   },
   lottieContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
     flex: 1,
   },
@@ -357,8 +444,8 @@ const styles = StyleSheet.create({
   },
   loadingOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
   },
 });

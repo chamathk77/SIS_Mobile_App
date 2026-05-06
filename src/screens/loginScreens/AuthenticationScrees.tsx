@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, Platform, Pressable, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Keyboard, Platform, Pressable, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fonts } from '../../constants/fonts';
 import { useTheme } from '../../context/ThemeContext';
@@ -9,11 +9,11 @@ import { RootStackParamList } from '../../navigation/RootStackParamsList';
 import CommonHeader from '../../components/CommonHeader/CommonHeader';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import LottieView from 'lottie-react-native';
+import { devLog } from '../../utils/devLog';
 
 type Props = NativeStackScreenProps<RootStackParamList, "AuthenticationScreen">;
 
 export default function AuthenticationScreen({ navigation }: Props) {
-  const [pin, setPin] = useState('');
 
   const timerDuration = 360;
   const [timer, setTimer] = useState(timerDuration);
@@ -40,6 +40,15 @@ export default function AuthenticationScreen({ navigation }: Props) {
     const minutes = Math.floor(timer / 60);
     const seconds = timer % 60;
     return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  const onPressVerify = () => {
+    devLog("otpCode", otpCode);
+    if(otpCode.length === 6) {
+      navigation.navigate("StudentSelectionScreen");
+    } else {
+      Alert.alert("Please enter a valid OTP");
+    }
   };
 
 
@@ -256,8 +265,11 @@ export default function AuthenticationScreen({ navigation }: Props) {
               </View>
             </View>
 
-            <TouchableOpacity style={[styles.verifyButton, { backgroundColor: paperTheme.colors.primary,borderRadius: 15 }]}>
-              <Text style={[styles.verifyButtonText, { color: paperTheme.colors.onPrimary, fontSize: 14 }]}>VERIFY &gt;</Text>
+            <TouchableOpacity style={[styles.verifyButton, { backgroundColor: paperTheme.colors.primary,borderRadius: 15 }]}
+              onPress={() => onPressVerify()}
+            >
+              <Text style={[styles.verifyButtonText, { color: paperTheme.colors.onPrimary, fontSize: 14 }]}
+              >VERIFY &gt;</Text>
             </TouchableOpacity>
 
           </View>

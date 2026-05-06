@@ -6,9 +6,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/loginScreens/LoginScreen';
 import { RootStackParamList } from './RootStackParamsList';
 import AuthenticationScrees from '../screens/loginScreens/AuthenticationScrees';
+import StudentSelectionScreen from '../screens/loginScreens/StudentSelectionScreen';
 import EnterEmailScreen from '../screens/forgot password/EnterEmailScreen';
 import EnterPinScreen from '../screens/forgot password/EnterPinScreen';
 import CreateNewPasswordScreen from '../screens/forgot password/CreateNewPasswordScreen';
+import MainBottomTabNavigator from './MainBottomTabNavigator';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -19,10 +21,12 @@ export default function AppNavigator() {
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator id="RootStack" initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="LoginScreen" component={LoginScreen} />
+        <Stack.Screen name="StudentSelectionScreen" component={StudentSelectionScreen} />
         <Stack.Screen name="AuthenticationScreen" component={AuthenticationScrees} />
         <Stack.Screen name="EnterEmailScreen" component={EnterEmailScreen} />
         <Stack.Screen name="EnterPinScreen" component={EnterPinScreen} />
         <Stack.Screen name="CreateNewPasswordScreen" component={CreateNewPasswordScreen} />
+        <Stack.Screen name="MainBottomTabs" component={MainBottomTabNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );

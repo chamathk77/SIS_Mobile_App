@@ -7,14 +7,9 @@ export interface LoginRequest {
 
 export interface LoginResponse {
 
-        success: boolean;
-        message: string;
-        data: {
-            access_token: string;
-            user: any;
-            schools: any[];
-            school: any;
-        };
+    success: boolean;
+    message: string;
+    data: any;
     
 }
 

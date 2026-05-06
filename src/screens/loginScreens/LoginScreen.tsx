@@ -26,6 +26,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../store/store";
 import { getDeviceNameForApi } from "../../utils/getDeviceNameForApi";
 import { devError, devLog } from "../../utils/devLog";
+import { saveToken } from "../../utils/secureStorage";
+import { setSchoolData, setStudentsData, setUserData } from "../../store/reducers/AuthReducer";
 
 const appVersion = require("../../../package.json").version;
 
@@ -71,22 +73,26 @@ export default function LoginScreen({ navigation }: Props) {
     };
 
     try {
-       devLog('loginData', loginData);
-        const result = await dispatch(login_Service(loginData)).unwrap();
-        devLog('result', result);
-        if (result.success) {
-          Alert.alert('Login', `Welcome back, ${email}!`);
-          Keyboard.dismiss();
+      devLog("loginData", loginData);
+      const result = await dispatch(login_Service(loginData)).unwrap();
+
+      devLog("result.data", JSON.stringify(result.data));
+
+      if (result.success) {
+        saveToken(result.data.token);
+        dispatch(setUserData(result.data.user));
+        dispatch(setSchoolData(result.data.schools));
+        dispatch(setStudentsData(result.data.students));    
+        Keyboard.dismiss();
+        setTimeout(() => {
           scrollRef.current?.scrollToPosition?.(0, 0, true);
-          navigation.navigate('AuthenticationScreen');
-        }
+          navigation.navigate("AuthenticationScreen");
+        }, 500);
+      }
       // navigation.navigate("AuthenticationScreen");
     } catch (error) {
       devError("error", error);
-      Alert.alert(
-        "Error",
-        error.message,
-      );
+      Alert.alert("Error", error.message);
     }
   };
 

@@ -37,12 +37,17 @@ function getStudentName(student: any, index: number): string {
     : `Student ${index + 1}`;
 }
 
-function getGrade(student: any): string {
-  const grade = student?.grade ?? student?.class ?? student?.standard;
-  if (grade == null || String(grade).trim() === "") {
-    return "Grade not available";
+function getSchoolLabel(student: any): string {
+  const school = student?.school;
+  const name =
+    typeof school === "string"
+      ? school
+      : school?.name ?? school?.title ?? student?.school_name;
+
+  if (name == null || String(name).trim() === "") {
+    return "School not available";
   }
-  return `Grade: ${String(grade)}`;
+  return `School: ${String(name)}`;
 }
 
 export default function StudentSelectionScreen({ navigation }: Props) {
@@ -50,6 +55,23 @@ export default function StudentSelectionScreen({ navigation }: Props) {
   const students = useSelector(
     (state: RootState) => state.AuthReducer.Login.studentsData ?? [],
   );
+  // const students = [
+  //   {
+  //     id: 1,
+  //     name: "John Doe",
+  //     grade: "10",
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "Jane Doe",
+  //     grade: "11",
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "Jim Doe",
+  //     grade: "12",
+  //   },
+  // ];
 
   return (
     <SafeAreaView
@@ -88,7 +110,7 @@ export default function StudentSelectionScreen({ navigation }: Props) {
       <FlatList
         data={students}
         keyExtractor={(item, index) =>
-          String(item?.id ?? item?.student_id ?? `student-${index}`)
+          String(item?.id ?? item?.id ?? `student-${index}`)
         }
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
@@ -119,7 +141,7 @@ export default function StudentSelectionScreen({ navigation }: Props) {
                 borderColor: paperTheme.colors.outlineVariant,
               },
             ]}
-            onPress={() => navigation.navigate("AuthenticationScreen")}
+            onPress={() => navigation.navigate("MainBottomTabs")}
           >
             <Text
               style={[
@@ -135,7 +157,7 @@ export default function StudentSelectionScreen({ navigation }: Props) {
                 { color: paperTheme.colors.onSurfaceVariant },
               ]}
             >
-              {getGrade(item)}
+              {getSchoolLabel(item)}
             </Text>
           </TouchableOpacity>
         )}

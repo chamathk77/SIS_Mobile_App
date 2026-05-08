@@ -18,10 +18,17 @@ import CalendarScreen from "../screens/dashboard/CalendarScreen";
 const Tab = createBottomTabNavigator<MainBottomTabParamList>();
 
 
+const TAB_BAR_BG_LIGHT = "#27272A";
+const TAB_BAR_BG_DARK = "#09090B";
+const TAB_LABEL_ACTIVE = "#FFFFFF";
+const TAB_LABEL_INACTIVE = "rgba(255, 255, 255, 0.58)";
+
 export default function MainBottomTabNavigator() {
-  const { paperTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const insets = useSafeAreaInsets();
-  
+  const tabBarBackground =
+    resolvedTheme === "dark" ? TAB_BAR_BG_DARK : TAB_BAR_BG_LIGHT;
+
   return (
     <Tab.Navigator
       id="MainBottomTabs"
@@ -49,8 +56,8 @@ export default function MainBottomTabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: paperTheme.colors.primary,
-        tabBarInactiveTintColor: paperTheme.colors.outline,
+        tabBarActiveTintColor: TAB_LABEL_ACTIVE,
+        tabBarInactiveTintColor: TAB_LABEL_INACTIVE,
         tabBarHideOnKeyboard: true,
         tabBarLabelStyle: {
           fontSize: 12,
@@ -59,9 +66,10 @@ export default function MainBottomTabNavigator() {
 
         },
         tabBarStyle: {
-          backgroundColor: paperTheme.colors.secondary,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
+          backgroundColor: tabBarBackground,
+          borderTopWidth: 0,
+          // borderTopLeftRadius: 20,
+          // borderTopRightRadius: 20,
           height: 80 + insets.bottom,
           paddingBottom: insets.bottom,
           paddingTop: 5,
@@ -78,8 +86,7 @@ export default function MainBottomTabNavigator() {
           justifyContent: "center",
           alignItems: "center",
           paddingVertical: 5,
-          backgroundColor: paperTheme.colors.secondary ,
-
+          backgroundColor: "transparent",
         },
         
       })}
@@ -93,7 +100,11 @@ export default function MainBottomTabNavigator() {
           tabBarLabel: ({ focused }) => (
             <Text
               style={[
-                { fontSize: 12, textAlign: "center", color: paperTheme.colors.primary },
+                {
+                  fontSize: 12,
+                  textAlign: "center",
+                  color: focused ? TAB_LABEL_ACTIVE : TAB_LABEL_INACTIVE,
+                },
                 { fontWeight: focused ? "700" : "400" },
               ]}
             >
@@ -110,7 +121,11 @@ export default function MainBottomTabNavigator() {
           tabBarLabel: ({ focused }) => (
             <Text
               style={[
-                { fontSize: 12, textAlign: "center", color: paperTheme.colors.primary },
+                {
+                  fontSize: 12,
+                  textAlign: "center",
+                  color: focused ? TAB_LABEL_ACTIVE : TAB_LABEL_INACTIVE,
+                },
                 { fontWeight: focused ? "700" : "400" },
               ]}
             >
@@ -127,7 +142,11 @@ export default function MainBottomTabNavigator() {
           tabBarLabel: ({ focused }) => (
             <Text
               style={[
-                { fontSize: 12, textAlign: "center", color: paperTheme.colors.primary },
+                {
+                  fontSize: 12,
+                  textAlign: "center",
+                  color: focused ? TAB_LABEL_ACTIVE : TAB_LABEL_INACTIVE,
+                },
                 { fontWeight: focused ? "700" : "400" },
               ]}
             >
@@ -144,7 +163,11 @@ export default function MainBottomTabNavigator() {
           tabBarLabel: ({ focused }) => (
             <Text
               style={[
-                { fontSize: 12, textAlign: "center", color: paperTheme.colors.primary },
+                {
+                  fontSize: 12,
+                  textAlign: "center",
+                  color: focused ? TAB_LABEL_ACTIVE : TAB_LABEL_INACTIVE,
+                },
                 { fontWeight: focused ? "700" : "400" },
               ]}
             >
@@ -161,7 +184,11 @@ export default function MainBottomTabNavigator() {
           tabBarLabel: ({ focused }) => (
             <Text
               style={[
-                { fontSize: 12, textAlign: "center", color: paperTheme.colors.primary },
+                {
+                  fontSize: 12,
+                  textAlign: "center",
+                  color: focused ? TAB_LABEL_ACTIVE : TAB_LABEL_INACTIVE,
+                },
                 { fontWeight: focused ? "700" : "400" },
               ]}
             >

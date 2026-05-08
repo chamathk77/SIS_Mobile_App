@@ -34,8 +34,8 @@ const appVersion = require("../../../package.json").version;
 type Props = NativeStackScreenProps<RootStackParamList, "LoginScreen">;
 
 export default function LoginScreen({ navigation }: Props) {
-  const [email, setEmail] = useState("sandev.net@gmail.com");
-  const [password, setPassword] = useState("Kalupusa321@");
+  const [email, setEmail] = useState("parent@zuse.lk");
+  const [password, setPassword] = useState("Parent321@");
   const [showPassword, setShowPassword] = useState(false);
   const { paperTheme, resolvedTheme } = useTheme();
   const scrollRef = useRef<any>(null);

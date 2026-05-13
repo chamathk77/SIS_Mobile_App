@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
+  Modal,
   StatusBar,
   StyleSheet,
   Text,
@@ -9,12 +12,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootStackParamList } from "../../navigation/RootStackParamsList";
-import { RootState } from "../../store/store";
+import { AppDispatch, RootState } from "../../store/store";
 import { useTheme } from "../../context/ThemeContext";
 import { fonts } from "../../constants/fonts";
 import CommonHeader from "../../components/CommonHeader/CommonHeader";
+import { devError, devLog } from "../../utils/devLog";
+import { SelectStudent_Service } from "../../services/AuthService";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -42,7 +47,7 @@ function getSchoolLabel(student: any): string {
   const name =
     typeof school === "string"
       ? school
-      : school?.name ?? school?.title ?? student?.school_name;
+      : (school?.name ?? school?.title ?? student?.school_name);
 
   if (name == null || String(name).trim() === "") {
     return "School not available";
@@ -55,6 +60,30 @@ export default function StudentSelectionScreen({ navigation }: Props) {
   const students = useSelector(
     (state: RootState) => state.AuthReducer.Login.studentsData ?? [],
   );
+  const isLoading = useSelector(
+    (state: RootState) => state.AuthReducer.SelectStudent.loading,
+  );
+
+  const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    devLog("students", students);
+  }, [students]);
+
+  async function OnSelectStudentPress(studentId: string) {
+    try {
+      devLog("studentId", studentId);
+      const result = await dispatch(SelectStudent_Service({ student_id: studentId })).unwrap();
+      devLog("result", JSON.stringify(result));
+      if (result.success) {
+        navigation.navigate("MainBottomTabs");
+      }
+    } catch (error) {
+      devError("error", error);
+      Alert.alert("Error", error.message);
+    }
+  }
+
   // const students = [
   //   {
   //     id: 1,
@@ -74,6 +103,18 @@ export default function StudentSelectionScreen({ navigation }: Props) {
   // ];
 
   return (
+  <>
+
+    <Modal
+      visible={isLoading}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+    >
+      <View style={styles.loadingOverlay}>
+        <ActivityIndicator size="large" color={paperTheme.colors.primary} />
+      </View>
+    </Modal>
     <SafeAreaView
       style={[
         styles.safeArea,
@@ -141,7 +182,7 @@ export default function StudentSelectionScreen({ navigation }: Props) {
                 borderColor: paperTheme.colors.outlineVariant,
               },
             ]}
-            onPress={() => navigation.navigate("MainBottomTabs")}
+            onPress={() => OnSelectStudentPress(item.id)}
           >
             <Text
               style={[
@@ -163,6 +204,8 @@ export default function StudentSelectionScreen({ navigation }: Props) {
         )}
       />
     </SafeAreaView>
+    
+  </>
   );
 }
 
@@ -214,5 +257,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.InterRegular,
     fontSize: 14,
     textAlign: "center",
+  },
+  loadingOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
   },
 });

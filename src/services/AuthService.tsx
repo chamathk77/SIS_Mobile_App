@@ -3,7 +3,7 @@ import { AnyActionArg } from "react";
 import { apiClient } from "../config/apiConfig";
 import { ensureInternetConnection } from "../utils/checkInternetConnection";
 import { ApiErrorResponse } from "../type/common";
-import { ForgotPassword_EnterEmail_Response, ForgotPassword_EnterEmail_Request, LoginRequest, LoginResponse, ForgotPassword_EnterPin_Request, ForgotPassword_EnterPin_Response, ForgotPassword_CreateNewPassword_Request, ForgotPassword_CreateNewPassword_Response } from "../type/auth";
+import { ForgotPassword_EnterEmail_Response, ForgotPassword_EnterEmail_Request, LoginRequest, LoginResponse, ForgotPassword_EnterPin_Request, ForgotPassword_EnterPin_Response, ForgotPassword_CreateNewPassword_Request, ForgotPassword_CreateNewPassword_Response, SelectStudent_Response, SelectStudent_Request } from "../type/auth";
 
 export const login_Service = createAsyncThunk(
   "auth/login",
@@ -184,6 +184,49 @@ export const ForgotPassword_CreateNewPassword_Service = createAsyncThunk(
         timestamp: new Date().toISOString(),
       };
       console.log("networkError:---" , networkError);
+      throw networkError;
+    }
+  },
+);
+
+export const SelectStudent_Service = createAsyncThunk(
+  "auth/select-student",
+  async (selectStudentData: SelectStudent_Request, { rejectWithValue }) => {
+    try {
+      await ensureInternetConnection();
+
+      const response = await apiClient.post<SelectStudent_Response>(
+        `students/${selectStudentData.student_id}/select`,
+      );
+
+      if (response.status === 200) {
+        console.log("Login response:", response.data);
+
+        return response.data;
+      }
+
+      const apiError: ApiErrorResponse = {
+        error: "Error",
+        message: "Login failed",
+        status: response.status,
+        timestamp: new Date().toISOString(),
+      };
+      throw apiError;
+    } catch (error: any) {
+      console.log("Login error:---", error);
+      // If error already has the API format (from interceptor), re-throw as-is
+      if (error.error && error.message && error.status && error.timestamp) {
+        throw error as ApiErrorResponse;
+      }
+
+      const networkError: ApiErrorResponse = {
+        error: "Network Error",
+        message:
+          error.message ||
+          "Network error. Please check your connection and try again.", 
+        status: 0,
+        timestamp: new Date().toISOString(),
+      };
       throw networkError;
     }
   },

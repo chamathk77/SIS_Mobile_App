@@ -4,6 +4,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from 'axios';
 import { ensureInternetConnection } from '../utils/checkInternetConnection';
+import { getSavedToken } from '../utils/secureStorage';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_BASE_URL || 
@@ -52,6 +53,16 @@ export const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     await ensureInternetConnection();
+    return config;
+  },
+);
+
+apiClient.interceptors.request.use(
+  async (config: InternalAxiosRequestConfig) => {
+    const token = await getSavedToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
 );

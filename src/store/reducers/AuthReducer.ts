@@ -4,6 +4,7 @@ import {
   ForgotPassword_EnterEmail_Service,
   ForgotPassword_EnterPin_Service,
   login_Service,
+  SelectStudent_Service,
 } from "../../services/AuthService";
 import { devLog } from "../../utils/devLog";
 
@@ -38,6 +39,12 @@ interface AuthState {
   };
 
   ForgotPasswordCreateNewPassword: {
+    loading: boolean;
+    error: string | null;
+    success: boolean;
+    data: any;
+  };
+  SelectStudent: {
     loading: boolean;
     error: string | null;
     success: boolean;
@@ -80,6 +87,12 @@ const initialState: AuthState = {
     success: false,
     data: null,
   },
+  SelectStudent: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
+  },
 };
 
 export const AuthSlice = createSlice({
@@ -111,14 +124,14 @@ export const AuthSlice = createSlice({
       state.Login.data = null;
     });
     builder.addCase(login_Service.fulfilled, (state, action) => {
-      console.log("Login Fulfilled:", action.payload);
+      devLog("Login Fulfilled:", action.payload);
       state.Login.loading = false;
       state.Login.success = true;
       state.Login.error = null;
       state.Login.data = action.payload;
     });
     builder.addCase(login_Service.rejected, (state, action) => {
-      console.log("Login Rejected:", action.error);
+      devLog("Login Rejected:", action.error);
       state.Login.loading = false;
       state.Login.error = action.error.message || "An error occurred";
       state.Login.success = false;
@@ -136,7 +149,7 @@ export const AuthSlice = createSlice({
     builder.addCase(
       ForgotPassword_EnterEmail_Service.fulfilled,
       (state, action) => {
-        console.log("Forgot Password Enter Email Fulfilled:", action.payload);
+        devLog("Forgot Password Enter Email Fulfilled:", action.payload);
         state.ForgotPasswordEnterEmail.loading = false;
         state.ForgotPasswordEnterEmail.success = true;
         state.ForgotPasswordEnterEmail.error = null;
@@ -146,7 +159,7 @@ export const AuthSlice = createSlice({
     builder.addCase(
       ForgotPassword_EnterEmail_Service.rejected,
       (state, action) => {
-        console.log("Forgot Password Enter Email Rejected:", action.error);
+        devLog("Forgot Password Enter Email Rejected:", action.error);
         state.ForgotPasswordEnterEmail.loading = false;
         state.ForgotPasswordEnterEmail.error =
           action.error.message || "An error occurred";
@@ -166,7 +179,7 @@ export const AuthSlice = createSlice({
     builder.addCase(
       ForgotPassword_EnterPin_Service.fulfilled,
       (state, action) => {
-        console.log("Forgot Password Enter Pin Fulfilled:", action.payload);
+        devLog("Forgot Password Enter Pin Fulfilled:", action.payload);
         state.ForgotPasswordEnterPin.loading = false;
         state.ForgotPasswordEnterPin.success = true;
         state.ForgotPasswordEnterPin.error = null;
@@ -176,7 +189,7 @@ export const AuthSlice = createSlice({
     builder.addCase(
       ForgotPassword_EnterPin_Service.rejected,
       (state, action) => {
-        console.log("Forgot Password Enter Pin Rejected:", action.error);
+        devLog("Forgot Password Enter Pin Rejected:", action.error);
         state.ForgotPasswordEnterPin.loading = false;
         state.ForgotPasswordEnterPin.error =
           action.error.message || "An error occurred";
@@ -199,7 +212,7 @@ export const AuthSlice = createSlice({
     builder.addCase(
       ForgotPassword_CreateNewPassword_Service.fulfilled,
       (state, action) => {
-        console.log(
+        devLog(
           "Forgot Password Create New Password Fulfilled:",
           action.payload,
         );
@@ -212,7 +225,7 @@ export const AuthSlice = createSlice({
     builder.addCase(
       ForgotPassword_CreateNewPassword_Service.rejected,
       (state, action) => {
-        console.log(
+        devLog(
           "Forgot Password Create New Password Rejected:",
           action.error,
         );
@@ -223,6 +236,30 @@ export const AuthSlice = createSlice({
         state.ForgotPasswordCreateNewPassword.data = null;
       },
     );
+
+    //Select Student
+
+    builder.addCase(SelectStudent_Service.pending, (state) => {
+      state.SelectStudent.loading = true;
+      state.SelectStudent.error = null;
+      state.SelectStudent.success = false;
+      state.SelectStudent.data = null;
+    });
+    builder.addCase(SelectStudent_Service.fulfilled, (state, action) => {
+      devLog("Select Student Fulfilled:", action.payload);
+      state.SelectStudent.loading = false;
+      state.SelectStudent.success = true;
+      state.SelectStudent.error = null;
+      state.SelectStudent.data = action.payload;
+    });
+    builder.addCase(SelectStudent_Service.rejected, (state, action) => {
+      devLog("Select Student Rejected:", action.error);
+      state.SelectStudent.loading = false;
+      state.SelectStudent.error =
+        action.error.message || ("An error occurred" as null);
+      state.SelectStudent.success = false;
+      state.SelectStudent.data = null;
+    });
   },
 });
 

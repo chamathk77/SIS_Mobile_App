@@ -3,9 +3,7 @@ import {
   ForgotPassword_CreateNewPassword_Service,
   ForgotPassword_EnterEmail_Service,
   ForgotPassword_EnterPin_Service,
-  GetStudentProfile_Service,
   login_Service,
-  SelectStudent_Service,
 } from "../../services/AuthService";
 import { devLog } from "../../utils/devLog";
 
@@ -45,20 +43,6 @@ interface AuthState {
     success: boolean;
     data: any;
   };
-  SelectStudent: {
-    loading: boolean;
-    error: string | null;
-    success: boolean;
-    data: any;
-    
-    selectedStudentId: string;
-  };
-  GetStudentProfile: {
-    loading: boolean;
-    error: string | null;
-    success: boolean;
-    data: any;
-  };
 }
 
 const initialState: AuthState = {
@@ -67,7 +51,6 @@ const initialState: AuthState = {
     error: null,
     success: false,
     data: null,
-    //
     userData: null,
     studentsData: [],
     schoolsData: [],
@@ -78,7 +61,6 @@ const initialState: AuthState = {
     error: null,
     success: false,
     data: null,
-
     email: "",
   },
 
@@ -87,23 +69,9 @@ const initialState: AuthState = {
     error: null,
     success: false,
     data: null,
-
     reset_token: "",
   },
   ForgotPasswordCreateNewPassword: {
-    loading: false,
-    error: null,
-    success: false,
-    data: null,
-  },
-  SelectStudent: {
-    loading: false,
-    error: null,
-    success: false,
-    data: null,
-    selectedStudentId: "",
-  },
-  GetStudentProfile: {
     loading: false,
     error: null,
     success: false,
@@ -155,8 +123,6 @@ export const AuthSlice = createSlice({
       state.Login.data = null;
     });
 
-    //Forgot Password
-
     builder.addCase(ForgotPassword_EnterEmail_Service.pending, (state) => {
       state.ForgotPasswordEnterEmail.loading = true;
       state.ForgotPasswordEnterEmail.error = null;
@@ -184,8 +150,6 @@ export const AuthSlice = createSlice({
         state.ForgotPasswordEnterEmail.data = null;
       },
     );
-
-    //Forgot Password Enter Pin
 
     builder.addCase(ForgotPassword_EnterPin_Service.pending, (state) => {
       state.ForgotPasswordEnterPin.loading = true;
@@ -215,8 +179,6 @@ export const AuthSlice = createSlice({
       },
     );
 
-    //Forgot Password Create New Password
-
     builder.addCase(
       ForgotPassword_CreateNewPassword_Service.pending,
       (state) => {
@@ -245,61 +207,11 @@ export const AuthSlice = createSlice({
         devLog("Forgot Password Create New Password Rejected:", action.error);
         state.ForgotPasswordCreateNewPassword.loading = false;
         state.ForgotPasswordCreateNewPassword.error =
-          action.error.message || ("An error occurred" as null);
+          action.error.message || "An error occurred";
         state.ForgotPasswordCreateNewPassword.success = false;
         state.ForgotPasswordCreateNewPassword.data = null;
       },
     );
-
-    //Select Student
-
-    builder.addCase(SelectStudent_Service.pending, (state) => {
-      state.SelectStudent.loading = true;
-      state.SelectStudent.error = null;
-      state.SelectStudent.success = false;
-      state.SelectStudent.data = null;
-    });
-    builder.addCase(SelectStudent_Service.fulfilled, (state, action) => {
-      devLog("Select Student Fulfilled:", action.payload);
-      state.SelectStudent.loading = false;
-      state.SelectStudent.success = true;
-      state.SelectStudent.error = null;
-      state.SelectStudent.data = action.payload;
-      state.SelectStudent.selectedStudentId = action.payload.data.student.id.toString();
-      console.log("selectedStudentId", state.SelectStudent.selectedStudentId);``
-    });
-    builder.addCase(SelectStudent_Service.rejected, (state, action) => {
-      devLog("Select Student Rejected:", action.error);
-      state.SelectStudent.loading = false;
-      state.SelectStudent.error =
-        action.error.message || ("An error occurred" as null);
-      state.SelectStudent.success = false;
-      state.SelectStudent.data = null;
-    });
-
-    //Get Student Profile
-
-    builder.addCase(GetStudentProfile_Service.pending, (state) => {
-      state.GetStudentProfile.loading = true;
-      state.GetStudentProfile.error = null;
-      state.GetStudentProfile.success = false;
-      state.GetStudentProfile.data = null;
-    });
-    builder.addCase(GetStudentProfile_Service.fulfilled, (state, action) => {
-      devLog("Get Student Profile Fulfilled:", action.payload);
-      state.GetStudentProfile.loading = false;
-      state.GetStudentProfile.success = true;
-      state.GetStudentProfile.error = null;
-      state.GetStudentProfile.data = action.payload;
-    });
-    builder.addCase(GetStudentProfile_Service.rejected, (state, action) => {
-      devLog("Get Student Profile Rejected:", action.error);
-      state.GetStudentProfile.loading = false;
-      state.GetStudentProfile.error =
-        action.error.message || ("An error occurred" as null);
-      state.GetStudentProfile.success = false;
-      state.GetStudentProfile.data = null;
-    });
   },
 });
 

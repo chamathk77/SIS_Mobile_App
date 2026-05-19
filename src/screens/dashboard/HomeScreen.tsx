@@ -39,7 +39,7 @@ export default function HomeScreen() {
   const { alertConfig, visible, hideAlert, show_Alert } = useCommonAlert();
 
   const selectStudentData = useSelector(
-    (state: RootState) => state.AuthReducer.SelectStudent.data,
+    (state: RootState) => state.StudentDataReducer.SelectStudent.data,
   );
   const parentUser = useSelector(
     (state: RootState) => state.AuthReducer.Login.userData,

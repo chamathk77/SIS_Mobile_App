@@ -44,13 +44,13 @@ export default function StudentProfileScreen({ navigation }: Props) {
   const dispatch = useDispatch<AppDispatch>();
 
   const selectedStudentId = useSelector(
-    (state: RootState) => state.AuthReducer.SelectStudent.selectedStudentId,
+    (state: RootState) => state.StudentDataReducer.SelectStudent.selectedStudentId,
   );
   const profilePayload = useSelector(
-    (state: RootState) => state.AuthReducer.GetStudentProfile.data,
+    (state: RootState) => state.StudentDataReducer.GetStudentProfile.data,
   );
   const isLoading = useSelector(
-    (state: RootState) => state.AuthReducer.GetStudentProfile.loading,
+    (state: RootState) => state.StudentDataReducer.GetStudentProfile.loading,
   );
   const studentsList = useSelector(
     (state: RootState) => state.AuthReducer.Login.studentsData ?? [],

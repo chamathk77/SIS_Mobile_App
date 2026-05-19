@@ -71,7 +71,7 @@ export default function StudentSelectionScreen({ navigation }: Props) {
     (state: RootState) => state.AuthReducer.Login.schoolsData ?? [],
   );
   const isLoading = useSelector(
-    (state: RootState) => state.AuthReducer.SelectStudent.loading,
+    (state: RootState) => state.StudentDataReducer.SelectStudent.loading,
   );
 
   const dispatch = useDispatch<AppDispatch>();

@@ -3,6 +3,8 @@ import { useTheme } from './src/context/ThemeContext';
 import { PaperProvider } from 'react-native-paper';
 import { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { customFonts } from "./src/constants/fonts";
 import * as SplashScreen from 'expo-splash-screen';
 import { Provider } from 'react-redux';
@@ -23,28 +25,19 @@ function ThemedApp() {
 
 
 export default function App() {
-  const [fontsLoaded, fontError] = useFonts(customFonts);
+  const [fontsLoaded, fontError] = useFonts({
+    ...customFonts,
+    ...Ionicons.font,
+    ...MaterialCommunityIcons.font,
+  });
   const [appIsReady, setAppIsReady] = useState(false);
 
 
 
   useEffect(() => {
-    async function prepare() {
-      try {
-        // Add a minimum delay to see splash screen (especially in development)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Wait for fonts to load
-        if (fontsLoaded || fontError) {
-          setAppIsReady(true);
-        }
-      } catch (e) {
-        console.warn(e);
-        setAppIsReady(true);
-      }
+    if (fontsLoaded || fontError) {
+      setAppIsReady(true);
     }
-
-    prepare();
   }, [fontsLoaded, fontError]);
 
   useEffect(() => {

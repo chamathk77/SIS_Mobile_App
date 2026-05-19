@@ -3,6 +3,7 @@ import {
   ForgotPassword_CreateNewPassword_Service,
   ForgotPassword_EnterEmail_Service,
   ForgotPassword_EnterPin_Service,
+  GetStudentProfile_Service,
   login_Service,
   SelectStudent_Service,
 } from "../../services/AuthService";
@@ -45,6 +46,14 @@ interface AuthState {
     data: any;
   };
   SelectStudent: {
+    loading: boolean;
+    error: string | null;
+    success: boolean;
+    data: any;
+    
+    selectedStudentId: string;
+  };
+  GetStudentProfile: {
     loading: boolean;
     error: string | null;
     success: boolean;
@@ -92,6 +101,13 @@ const initialState: AuthState = {
     error: null,
     success: false,
     data: null,
+    selectedStudentId: "",
+  },
+  GetStudentProfile: {
+    loading: false,
+    error: null,
+    success: false,
+    data: null,
   },
 };
 
@@ -115,6 +131,7 @@ export const AuthSlice = createSlice({
       state.ForgotPasswordEnterEmail.email = action.payload;
       devLog("setForgotPasswordEmail saved to reducer ", action.payload);
     },
+    logout: () => initialState,
   },
   extraReducers: (builder) => {
     builder.addCase(login_Service.pending, (state) => {
@@ -225,10 +242,7 @@ export const AuthSlice = createSlice({
     builder.addCase(
       ForgotPassword_CreateNewPassword_Service.rejected,
       (state, action) => {
-        devLog(
-          "Forgot Password Create New Password Rejected:",
-          action.error,
-        );
+        devLog("Forgot Password Create New Password Rejected:", action.error);
         state.ForgotPasswordCreateNewPassword.loading = false;
         state.ForgotPasswordCreateNewPassword.error =
           action.error.message || ("An error occurred" as null);
@@ -251,6 +265,8 @@ export const AuthSlice = createSlice({
       state.SelectStudent.success = true;
       state.SelectStudent.error = null;
       state.SelectStudent.data = action.payload;
+      state.SelectStudent.selectedStudentId = action.payload.data.student.id.toString();
+      console.log("selectedStudentId", state.SelectStudent.selectedStudentId);``
     });
     builder.addCase(SelectStudent_Service.rejected, (state, action) => {
       devLog("Select Student Rejected:", action.error);
@@ -260,6 +276,30 @@ export const AuthSlice = createSlice({
       state.SelectStudent.success = false;
       state.SelectStudent.data = null;
     });
+
+    //Get Student Profile
+
+    builder.addCase(GetStudentProfile_Service.pending, (state) => {
+      state.GetStudentProfile.loading = true;
+      state.GetStudentProfile.error = null;
+      state.GetStudentProfile.success = false;
+      state.GetStudentProfile.data = null;
+    });
+    builder.addCase(GetStudentProfile_Service.fulfilled, (state, action) => {
+      devLog("Get Student Profile Fulfilled:", action.payload);
+      state.GetStudentProfile.loading = false;
+      state.GetStudentProfile.success = true;
+      state.GetStudentProfile.error = null;
+      state.GetStudentProfile.data = action.payload;
+    });
+    builder.addCase(GetStudentProfile_Service.rejected, (state, action) => {
+      devLog("Get Student Profile Rejected:", action.error);
+      state.GetStudentProfile.loading = false;
+      state.GetStudentProfile.error =
+        action.error.message || ("An error occurred" as null);
+      state.GetStudentProfile.success = false;
+      state.GetStudentProfile.data = null;
+    });
   },
 });
 
@@ -268,6 +308,7 @@ export const {
   setSchoolData,
   setStudentsData,
   setForgotPasswordEmail,
+  logout,
 } = AuthSlice.actions;
 
 export default AuthSlice.reducer;

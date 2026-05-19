@@ -53,6 +53,17 @@ export interface ForgotPassword_CreateNewPassword_Response {
     message: string;
 }
 
+export interface ChangePassword_Request {
+    current_password: string;
+    password: string;
+    password_confirmation: string;
+}
+
+export interface ChangePassword_Response {
+    success: boolean;
+    message: string;
+}
+
 
 export interface SelectStudent_Request {
     student_id: string;
@@ -106,4 +117,15 @@ export interface SelectStudent_Response {
             };
         };
     };
+}
+
+
+export interface GetStudent_Response {
+    success: boolean;
+    message: string;
+    data: any;
+}
+
+export interface GetStudent_Request {
+    student_id: string;
 }

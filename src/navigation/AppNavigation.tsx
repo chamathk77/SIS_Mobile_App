@@ -11,6 +11,10 @@ import EnterEmailScreen from '../screens/forgot password/EnterEmailScreen';
 import EnterPinScreen from '../screens/forgot password/EnterPinScreen';
 import CreateNewPasswordScreen from '../screens/forgot password/CreateNewPasswordScreen';
 import MainBottomTabNavigator from './MainBottomTabNavigator';
+import SettingsScreen from '../screens/dashboard/sidebar/settings/SettingsScreen';
+import ChangePasswordScreen from '../screens/dashboard/sidebar/settings/ChangePasswordScreen';
+import ParentProfileScreen from '../screens/dashboard/sidebar/ParentProfileScreen';
+import StudentProfileScreen from '../screens/dashboard/sidebar/StudentProfileScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,6 +31,10 @@ export default function AppNavigator() {
         <Stack.Screen name="EnterPinScreen" component={EnterPinScreen} />
         <Stack.Screen name="CreateNewPasswordScreen" component={CreateNewPasswordScreen} />
         <Stack.Screen name="MainBottomTabs" component={MainBottomTabNavigator} />
+        <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+        <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
+        <Stack.Screen name="ParentProfileScreen" component={ParentProfileScreen} />
+        <Stack.Screen name="StudentProfileScreen" component={StudentProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -50,16 +50,13 @@ export const apiClient: AxiosInstance = axios.create({
   },
 });
 
+// Single interceptor: run network check and token read in parallel (faster than two sequential interceptors).
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    await ensureInternetConnection();
-    return config;
-  },
-);
-
-apiClient.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    const token = await getSavedToken();
+    const [, token] = await Promise.all([
+      ensureInternetConnection(),
+      getSavedToken(),
+    ]);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

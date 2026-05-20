@@ -11,8 +11,9 @@ export const GetAttendance_Service = createAsyncThunk(
   async (params: GetAttendance_Request) => {
     try {
       const page = params.page ?? 1;
+      const perPage = params.per_page ?? 10;
       const response = await apiClient.get<GetAttendance_Response>(
-        `attendance?from=2026-04-01&to=2026-04-30&page=${page}&per_page=10`,
+        `attendance?from=${params.from}&to=${params.to}&page=${page}&per_page=${perPage}`,
         {
           headers: {
             "X-Student-Id": params.student_id,

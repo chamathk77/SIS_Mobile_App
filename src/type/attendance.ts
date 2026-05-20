@@ -1,4 +1,9 @@
-export type AttendanceStatus = "present" | "absent" | "late" | string;
+export type AttendanceStatus =
+  | "present"
+  | "absent"
+  | "late"
+  | "excused"
+  | string;
 
 export interface AttendanceRecord {
   id: number;
@@ -11,6 +16,7 @@ export interface AttendanceSummary {
   present: number;
   absent: number;
   late: number;
+  excused?: number;
   total: number;
 }
 
@@ -36,5 +42,8 @@ export interface GetAttendance_Response {
 
 export interface GetAttendance_Request {
   student_id: string;
+  from: string;
+  to: string;
   page?: number;
+  per_page?: number;
 }

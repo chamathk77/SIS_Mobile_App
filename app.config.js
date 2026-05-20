@@ -1,7 +1,11 @@
 module.exports = ({ config }) => ({
   ...config,
   userInterfaceStyle: 'automatic',
-  plugins: [...(config.plugins || []), 'expo-font'],
+  plugins: [
+    ...(config.plugins || []),
+    'expo-font',
+    '@react-native-community/datetimepicker',
+  ],
   splash: {
     image: './assets/splash-icon.png',
     resizeMode: 'contain',

@@ -26,9 +26,12 @@ export const AttendanceSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(logout, () => initialState);
 
-    builder.addCase(GetAttendance_Service.pending, (state) => {
+    builder.addCase(GetAttendance_Service.pending, (state, action) => {
       state.loading = true;
       state.error = null;
+      if ((action.meta.arg.page ?? 1) === 1) {
+        state.data = null;
+      }
     });
     builder.addCase(GetAttendance_Service.fulfilled, (state, action) => {
       devLog("Get Attendance Fulfilled:", action.payload);

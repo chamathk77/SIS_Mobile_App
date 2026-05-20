@@ -1,9 +1,10 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Modal,
   Platform,
+  Pressable,
   RefreshControl,
   StatusBar,
   StyleSheet,
@@ -13,17 +14,30 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
+import { useFocusEffect } from "@react-navigation/native";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
+import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { fonts } from "../../constants/fonts";
 import { AppDispatch, RootState } from "../../store/store";
 import { GetAttendance_Service } from "../../services/AttendanceService";
 import { AttendanceRecord } from "../../type/attendance";
 import {
+  applyAttendanceDateChange,
+  AttendanceDateRange,
   formatAttendanceDate,
   formatAttendanceStatus,
+  formatDateForApi,
+  formatDateForDisplay,
+  formatDateRangeLabel,
   getAttendanceStatusColors,
+  getExcusedCount,
+  getMonthDateRange,
+  getToday,
+  isSameDateRange,
 } from "../../utils/attendanceHelpers";
-import { useFocusEffect } from "@react-navigation/native";
 
 type SummaryCardProps = {
   label: string;
@@ -32,6 +46,8 @@ type SummaryCardProps = {
   background: string;
   textColor: string;
 };
+
+type PickerTarget = "start" | "end" | null;
 
 function SummaryCard({
   label,
@@ -48,9 +64,46 @@ function SummaryCard({
   );
 }
 
+function DateField({
+  label,
+  value,
+  onPress,
+  borderColor,
+  backgroundColor,
+  labelColor,
+  valueColor,
+}: {
+  label: string;
+  value: Date;
+  onPress: () => void;
+  borderColor: string;
+  backgroundColor: string;
+  labelColor: string;
+  valueColor: string;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.dateField, { borderColor, backgroundColor }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <Text style={[styles.dateFieldLabel, { color: labelColor }]}>{label}</Text>
+      <View style={styles.dateFieldRow}>
+        <Text style={[styles.dateFieldValue, { color: valueColor }]}>
+          {formatDateForDisplay(value)}
+        </Text>
+        <Ionicons name="calendar-outline" size={18} color={labelColor} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function AttendanceScreen() {
   const { paperTheme, resolvedTheme } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
+
+  const today = useMemo(() => getToday(), []);
+  const currentMonthRange = useMemo(() => getMonthDateRange(today), [today]);
 
   const selectedStudentId = useSelector(
     (state: RootState) => state.StudentDataReducer.SelectStudent.selectedStudentId,
@@ -62,6 +115,17 @@ export default function AttendanceScreen() {
     (state: RootState) => state.AttendanceReducer.loading,
   );
 
+  const [startDate, setStartDate] = useState(currentMonthRange.from);
+  const [endDate, setEndDate] = useState(currentMonthRange.to);
+  const [appliedRange, setAppliedRange] =
+    useState<AttendanceDateRange>(currentMonthRange);
+  const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
+  const [iosPickerDraft, setIosPickerDraft] = useState<Date | null>(null);
+  const [rangeError, setRangeError] = useState<string | null>(null);
+
+  const appliedRangeRef = useRef(appliedRange);
+  appliedRangeRef.current = appliedRange;
+
   const attendanceData = attendancePayload?.data;
   const summary = attendanceData?.summary;
   const records = attendanceData?.records ?? [];
@@ -70,23 +134,41 @@ export default function AttendanceScreen() {
   const canLoadMore =
     meta != null && meta.current_page < meta.last_page;
 
+  const isCustomRange = useMemo(
+    () => !isSameDateRange(appliedRange, getMonthDateRange(new Date())),
+    [appliedRange],
+  );
+
   const themeColors = paperTheme.colors as typeof paperTheme.colors & {
     success: string;
     successContainer: string;
     onSuccessContainer: string;
+    tertiary: string;
     tertiaryContainer: string;
     onTertiaryContainer: string;
+    secondary: string;
+    secondaryContainer: string;
+    onSecondaryContainer: string;
   };
 
   const fetchAttendance = useCallback(
-    async (page = 1) => {
+    async (page = 1, range?: AttendanceDateRange) => {
       const id = selectedStudentId?.trim();
       if (!id) {
         return;
       }
-      await dispatch(
-        GetAttendance_Service({ student_id: String(id), page }),
+
+      const activeRange = range ?? appliedRangeRef.current;
+     const response = await dispatch(
+        GetAttendance_Service({
+          student_id: String(id),
+          page,
+          from: formatDateForApi(activeRange.from),
+          to: formatDateForApi(activeRange.to),
+        }),
       ).unwrap();
+
+      console.log("response", JSON.stringify(response, null, 2));
     },
     [dispatch, selectedStudentId],
   );
@@ -97,6 +179,90 @@ export default function AttendanceScreen() {
         void fetchAttendance(1);
       }
     }, [selectedStudentId, fetchAttendance]),
+  );
+
+  const applyDateSelection = useCallback(
+    (changed: "start" | "end", date: Date) => {
+      const next = applyAttendanceDateChange(startDate, endDate, changed, date);
+      setStartDate(next.from);
+      setEndDate(next.to);
+      setRangeError(null);
+    },
+    [startDate, endDate],
+  );
+
+  const handleSearch = useCallback(() => {
+    const from = new Date(startDate);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(endDate);
+    to.setHours(23, 59, 59, 999);
+
+    if (from > today || to > today) {
+      setRangeError("Dates cannot be in the future.");
+      return;
+    }
+
+    if (from > to) {
+      setRangeError("Start date must be on or before end date.");
+      return;
+    }
+
+    setRangeError(null);
+    const range = { from, to };
+    setAppliedRange(range);
+    void fetchAttendance(1, range);
+  }, [startDate, endDate, fetchAttendance, today]);
+
+  const handleResetToCurrentMonth = useCallback(() => {
+    const range = getMonthDateRange(new Date());
+    setStartDate(range.from);
+    setEndDate(range.to);
+    setAppliedRange(range);
+    setRangeError(null);
+    void fetchAttendance(1, range);
+  }, [fetchAttendance]);
+
+  const openPicker = useCallback((target: "start" | "end") => {
+    setPickerTarget(target);
+    setIosPickerDraft(target === "start" ? startDate : endDate);
+  }, [startDate, endDate]);
+
+  const onPickerChange = useCallback(
+    (event: DateTimePickerEvent, date?: Date) => {
+      if (Platform.OS === "android") {
+        setPickerTarget(null);
+        if (event.type === "dismissed" || !date) {
+          return;
+        }
+        if (pickerTarget === "start" || pickerTarget === "end") {
+          applyDateSelection(pickerTarget, date);
+        }
+        return;
+      }
+
+      if (date) {
+        setIosPickerDraft(date);
+      }
+    },
+    [pickerTarget, applyDateSelection],
+  );
+
+  const confirmIosPicker = useCallback(() => {
+    if (iosPickerDraft && (pickerTarget === "start" || pickerTarget === "end")) {
+      applyDateSelection(pickerTarget, iosPickerDraft);
+    }
+    setPickerTarget(null);
+    setIosPickerDraft(null);
+  }, [iosPickerDraft, pickerTarget, applyDateSelection]);
+
+  const cancelIosPicker = useCallback(() => {
+    setPickerTarget(null);
+    setIosPickerDraft(null);
+  }, []);
+
+  const excusedCount = useMemo(
+    () => (summary ? getExcusedCount(summary, records) : 0),
+    [summary, records],
   );
 
   const summaryCards = useMemo(() => {
@@ -129,18 +295,17 @@ export default function AttendanceScreen() {
         textColor: themeColors.onTertiaryContainer,
       },
       {
-        key: "total",
-        label: "Total",
-        value: summary.total,
-        accent: themeColors.primary,
-        background: themeColors.primaryContainer,
-        textColor: themeColors.onPrimaryContainer,
+        key: "excused",
+        label: "Excused",
+        value: excusedCount,
+        accent: themeColors.secondary,
+        background: themeColors.secondaryContainer,
+        textColor: themeColors.onSecondaryContainer,
       },
     ];
-  }, [summary, themeColors]);
+  }, [summary, excusedCount, themeColors]);
 
   function renderRecord({ item }: { item: AttendanceRecord }) {
-
     const statusColors = getAttendanceStatusColors(item.status, {
       successContainer: themeColors.successContainer,
       onSuccessContainer: themeColors.onSuccessContainer,
@@ -148,8 +313,10 @@ export default function AttendanceScreen() {
       onErrorContainer: themeColors.onErrorContainer,
       tertiaryContainer: themeColors.tertiaryContainer,
       onTertiaryContainer: themeColors.onTertiaryContainer,
-      surfaceVariant: themeColors.surfaceVariant,
-      onSurfaceVariant: themeColors.onSurfaceVariant,
+      secondaryContainer: themeColors.secondaryContainer,
+      onSecondaryContainer: themeColors.onSecondaryContainer,
+      surfaceVariant: paperTheme.colors.surfaceVariant,
+      onSurfaceVariant: paperTheme.colors.onSurfaceVariant,
     });
 
     return (
@@ -194,6 +361,7 @@ export default function AttendanceScreen() {
       <Text style={[styles.screenTitle, { color: paperTheme.colors.onSurface }]}>
         Attendance
       </Text>
+
       {!selectedStudentId ? (
         <Text
           style={[
@@ -203,7 +371,109 @@ export default function AttendanceScreen() {
         >
           Select a student to view attendance.
         </Text>
-      ) : null}
+      ) : (
+        <View
+          style={[
+            styles.filterCard,
+            {
+              backgroundColor: paperTheme.colors.surface,
+              borderColor: paperTheme.colors.outline,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.filterTitle,
+              { color: paperTheme.colors.onSurface },
+            ]}
+          >
+            Search by date
+          </Text>
+
+          <View style={styles.dateRow}>
+            <DateField
+              label="Start date"
+              value={startDate}
+              onPress={() => openPicker("start")}
+              borderColor={paperTheme.colors.outline}
+              backgroundColor={paperTheme.colors.surfaceVariant}
+              labelColor={paperTheme.colors.onSurfaceVariant}
+              valueColor={paperTheme.colors.onSurface}
+            />
+            <DateField
+              label="End date"
+              value={endDate}
+              onPress={() => openPicker("end")}
+              borderColor={paperTheme.colors.outline}
+              backgroundColor={paperTheme.colors.surfaceVariant}
+              labelColor={paperTheme.colors.onSurfaceVariant}
+              valueColor={paperTheme.colors.onSurface}
+            />
+          </View>
+
+          {rangeError ? (
+            <Text style={[styles.rangeError, { color: paperTheme.colors.error }]}>
+              {rangeError}
+            </Text>
+          ) : null}
+
+          <View style={styles.filterActions}>
+            <TouchableOpacity
+              style={[
+                styles.searchButton,
+                { backgroundColor: paperTheme.colors.primary },
+              ]}
+              onPress={handleSearch}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name="search"
+                size={18}
+                color={paperTheme.colors.onPrimary}
+              />
+              <Text
+                style={[
+                  styles.searchButtonText,
+                  { color: paperTheme.colors.onPrimary },
+                ]}
+              >
+                Search
+              </Text>
+            </TouchableOpacity>
+
+            {isCustomRange ? (
+              <TouchableOpacity
+                style={[
+                  styles.resetButton,
+                  { borderColor: paperTheme.colors.outline },
+                ]}
+                onPress={handleResetToCurrentMonth}
+                activeOpacity={0.85}
+              >
+                <Text
+                  style={[
+                    styles.resetButtonText,
+                    { color: paperTheme.colors.onSurface },
+                  ]}
+                >
+                  This month
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          <Text
+            style={[
+              styles.periodLabel,
+              { color: paperTheme.colors.onSurfaceVariant },
+            ]}
+          >
+            {isCustomRange
+              ? `Showing ${formatDateRangeLabel(appliedRange)}`
+              : `Showing current month · ${formatDateRangeLabel(appliedRange)}`}
+          </Text>
+        </View>
+      )}
 
       {summary ? (
         <View style={styles.summaryGrid}>
@@ -241,7 +511,7 @@ export default function AttendanceScreen() {
             { color: paperTheme.colors.onSurfaceVariant },
           ]}
         >
-          No attendance records found.
+          No attendance records found for this period.
         </Text>
       </View>
     ) : null;
@@ -267,6 +537,18 @@ export default function AttendanceScreen() {
       <View style={styles.footerSpacer} />
     );
 
+  const pickerValue =
+    iosPickerDraft ?? (pickerTarget === "start" ? startDate : endDate);
+  const pickerMaximumDate =
+    pickerTarget === "end"
+      ? today
+      : pickerTarget === "start"
+        ? endDate > today
+          ? today
+          : endDate
+        : today;
+  const pickerMinimumDate = pickerTarget === "end" ? startDate : undefined;
+
   return (
     <>
       <Modal
@@ -279,6 +561,78 @@ export default function AttendanceScreen() {
           <ActivityIndicator size="large" color={paperTheme.colors.primary} />
         </View>
       </Modal>
+
+      {Platform.OS === "ios" ? (
+        <Modal
+          visible={pickerTarget != null}
+          transparent
+          animationType="slide"
+          onRequestClose={cancelIosPicker}
+        >
+          <Pressable style={styles.pickerBackdrop} onPress={cancelIosPicker}>
+            <Pressable
+              style={[
+                styles.pickerSheet,
+                { backgroundColor: paperTheme.colors.surface },
+              ]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.pickerHeader}>
+                <TouchableOpacity onPress={cancelIosPicker}>
+                  <Text
+                    style={[
+                      styles.pickerAction,
+                      { color: paperTheme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.pickerTitle,
+                    { color: paperTheme.colors.onSurface },
+                  ]}
+                >
+                  {pickerTarget === "start" ? "Start date" : "End date"}
+                </Text>
+                <TouchableOpacity onPress={confirmIosPicker}>
+                  <Text
+                    style={[
+                      styles.pickerAction,
+                      { color: paperTheme.colors.primary },
+                    ]}
+                  >
+                    Done
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {pickerTarget != null ? (
+                <DateTimePicker
+                  value={pickerValue}
+                  mode="date"
+                  display="spinner"
+                  maximumDate={pickerMaximumDate}
+                  minimumDate={pickerMinimumDate}
+                  onChange={onPickerChange}
+                  themeVariant={resolvedTheme === "dark" ? "dark" : "light"}
+                />
+              ) : null}
+            </Pressable>
+          </Pressable>
+        </Modal>
+      ) : null}
+
+      {Platform.OS === "android" && pickerTarget != null ? (
+        <DateTimePicker
+          value={pickerValue}
+          mode="date"
+          display="default"
+          maximumDate={pickerMaximumDate}
+          minimumDate={pickerMinimumDate}
+          onChange={onPickerChange}
+        />
+      ) : null}
 
       <SafeAreaView
         style={[
@@ -341,6 +695,98 @@ const styles = StyleSheet.create({
     fontFamily: fonts.InterRegular,
     fontSize: 14,
     marginBottom: 16,
+  },
+  filterCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 20,
+    gap: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  filterTitle: {
+    fontFamily: fonts.PoppinsSemiBold,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  dateRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  dateField: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  dateFieldLabel: {
+    fontFamily: fonts.InterRegular,
+    fontSize: 11,
+    lineHeight: 14,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  dateFieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  dateFieldValue: {
+    flex: 1,
+    fontFamily: fonts.PoppinsMedium,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  rangeError: {
+    fontFamily: fonts.InterRegular,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  filterActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  searchButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  searchButtonText: {
+    fontFamily: fonts.PoppinsSemiBold,
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  resetButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: "center",
+  },
+  resetButtonText: {
+    fontFamily: fonts.PoppinsSemiBold,
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  periodLabel: {
+    fontFamily: fonts.InterRegular,
+    fontSize: 12,
+    lineHeight: 16,
   },
   summaryGrid: {
     flexDirection: "row",
@@ -459,5 +905,32 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.9)",
+  },
+  pickerBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
+  pickerSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: Platform.OS === "ios" ? 24 : 0,
+  },
+  pickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(128,128,128,0.3)",
+  },
+  pickerTitle: {
+    fontFamily: fonts.PoppinsSemiBold,
+    fontSize: 15,
+  },
+  pickerAction: {
+    fontFamily: fonts.PoppinsMedium,
+    fontSize: 15,
   },
 });

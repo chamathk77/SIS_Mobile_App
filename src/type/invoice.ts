@@ -80,13 +80,4 @@ export interface GetInvoices_Request {
   to?: string;
 }
 
-export interface Receipt {
-  id: number;
-  receipt_number: string;
-  invoice_number: string;
-  title?: string;
-  amount: number;
-  currency?: string;
-  payment_method: string;
-  paid_at: string;
-}
+export type { Receipt } from "./receipt";

@@ -1,4 +1,5 @@
-import { Invoice, InvoiceMeta, InvoiceSummary, Receipt } from "../type/invoice";
+import { Invoice, InvoiceMeta, InvoiceSummary } from "../type/invoice";
+import { Receipt } from "../type/receipt";
 
 export const USE_DUMMY_INVOICE_DATA = false;
 
@@ -104,33 +105,48 @@ export const DUMMY_INVOICES: Invoice[] = [
 export const DUMMY_RECEIPTS: Receipt[] = [
   {
     id: 101,
-    receipt_number: "ZSE-RCP-00001",
-    invoice_number: "ZSE-INV-00001",
-    title: "Monthly Tuition - March 2026",
     amount: 3500,
+    payment_method: "bank",
+    payment_date: "2026-03-15",
+    reference_number: "ZSE-RCP-00001",
+    status: "completed",
     currency: "LKR",
-    payment_method: "Bank transfer",
-    paid_at: "2026-03-15T10:30:00+00:00",
+    invoice: {
+      id: 1,
+      invoice_number: "ZSE-INV-00001",
+      title: "Monthly Tuition - March 2026",
+      total: 3500,
+    },
   },
   {
     id: 102,
-    receipt_number: "RYC-RCP-2026-0018",
-    invoice_number: "RYC-INV-2026-0042",
-    title: "Term 1 Fees (partial)",
     amount: 20000,
+    payment_method: "card",
+    payment_date: "2026-01-25",
+    reference_number: "RYC-RCP-2026-0018",
+    status: "completed",
     currency: "LKR",
-    payment_method: "Card",
-    paid_at: "2026-01-25T14:00:00+00:00",
+    invoice: {
+      id: 2,
+      invoice_number: "RYC-INV-2026-0042",
+      title: "Term 1 Fees (partial)",
+      total: 35000,
+    },
   },
   {
     id: 103,
-    receipt_number: "ZSE-RCP-00006",
-    invoice_number: "ZSE-INV-00006",
-    title: "Deposit Refund",
     amount: 5000,
+    payment_method: "bank",
+    payment_date: "2026-01-20",
+    reference_number: "ZSE-RCP-00006",
+    status: "completed",
     currency: "LKR",
-    payment_method: "Bank transfer",
-    paid_at: "2026-01-20T11:15:00+00:00",
+    invoice: {
+      id: 6,
+      invoice_number: "ZSE-INV-00006",
+      title: "Deposit Refund",
+      total: 5000,
+    },
   },
 ];
 

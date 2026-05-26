@@ -43,8 +43,12 @@ type SummaryCardProps = {
   label: string;
   value: number;
   accent: string;
-  background: string;
-  textColor: string;
+  surface: string;
+  border: string;
+  text: string;
+  muted: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  shareLabel?: string;
 };
 
 type PickerTarget = "start" | "end" | null;
@@ -53,13 +57,36 @@ function SummaryCard({
   label,
   value,
   accent,
-  background,
-  textColor,
+  surface,
+  border,
+  text,
+  muted,
+  icon,
+  shareLabel,
 }: SummaryCardProps) {
   return (
-    <View style={[styles.summaryCard, { backgroundColor: background, borderColor: accent }]}>
-      <Text style={[styles.summaryValue, { color: textColor }]}>{value}</Text>
-      <Text style={[styles.summaryLabel, { color: textColor }]}>{label}</Text>
+    <View
+      style={[
+        styles.summaryCard,
+        { backgroundColor: surface, borderColor: border },
+      ]}
+    >
+      <View style={[styles.summaryIcon, { backgroundColor: `${accent}18` }]}>
+        <Ionicons name={icon} size={13} color={accent} />
+      </View>
+      <View style={styles.summaryTextCol}>
+        <View style={styles.summaryValueRow}>
+          <Text style={[styles.summaryValue, { color: text }]}>{value}</Text>
+          {shareLabel ? (
+            <Text style={[styles.summaryShare, { color: accent }]}>
+              {shareLabel}
+            </Text>
+          ) : null}
+        </View>
+        <Text style={[styles.summaryLabel, { color: muted }]} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -159,7 +186,7 @@ export default function AttendanceScreen() {
       }
 
       const activeRange = range ?? appliedRangeRef.current;
-     const response = await dispatch(
+      await dispatch(
         GetAttendance_Service({
           student_id: String(id),
           page,
@@ -168,7 +195,6 @@ export default function AttendanceScreen() {
         }),
       ).unwrap();
 
-      console.log("response", JSON.stringify(response, null, 2));
     },
     [dispatch, selectedStudentId],
   );
@@ -265,45 +291,75 @@ export default function AttendanceScreen() {
     [summary, records],
   );
 
+  const formatShare = useCallback((count: number, total: number) => {
+    if (total <= 0) {
+      return undefined;
+    }
+    const pct = Math.round((count / total) * 100);
+    return `${pct}%`;
+  }, []);
+
   const summaryCards = useMemo(() => {
     if (!summary) {
       return [];
     }
+    const total = summary.total > 0 ? summary.total : 0;
+    const surface = paperTheme.colors.surface;
+    const border = paperTheme.colors.outline;
+    const text = paperTheme.colors.onSurface;
+    const muted = paperTheme.colors.onSurfaceVariant;
+
     return [
       {
         key: "present",
         label: "Present",
         value: summary.present,
+        icon: "checkmark-circle" as const,
         accent: themeColors.success,
-        background: themeColors.successContainer,
-        textColor: themeColors.onSuccessContainer,
+        surface,
+        border,
+        text,
+        muted,
+        shareLabel: formatShare(summary.present, total),
       },
       {
         key: "absent",
         label: "Absent",
         value: summary.absent,
+        icon: "close-circle" as const,
         accent: themeColors.error,
-        background: themeColors.errorContainer,
-        textColor: themeColors.onErrorContainer,
+        surface,
+        border,
+        text,
+        muted,
+        shareLabel: formatShare(summary.absent, total),
       },
       {
         key: "late",
         label: "Late",
         value: summary.late,
+        icon: "time" as const,
         accent: themeColors.tertiary,
-        background: themeColors.tertiaryContainer,
-        textColor: themeColors.onTertiaryContainer,
+        surface,
+        border,
+        text,
+        muted,
+        shareLabel: formatShare(summary.late, total),
       },
       {
         key: "excused",
         label: "Excused",
         value: excusedCount,
+        icon: "document-text" as const,
         accent: themeColors.secondary,
-        background: themeColors.secondaryContainer,
-        textColor: themeColors.onSecondaryContainer,
+        surface,
+        border,
+        text,
+        muted,
+        shareLabel: formatShare(excusedCount, total),
       },
     ];
-  }, [summary, excusedCount, themeColors]);
+  }, [summary, excusedCount, themeColors, formatShare, paperTheme.colors]);
 
   function renderRecord({ item }: { item: AttendanceRecord }) {
     const statusColors = getAttendanceStatusColors(item.status, {
@@ -476,10 +532,38 @@ export default function AttendanceScreen() {
       )}
 
       {summary ? (
-        <View style={styles.summaryGrid}>
-          {summaryCards.map(({ key, ...card }) => (
-            <SummaryCard key={key} {...card} />
-          ))}
+        <View
+          style={[
+            styles.summaryWrap,
+            {
+              backgroundColor: paperTheme.colors.surfaceVariant,
+              borderColor: paperTheme.colors.outline,
+            },
+          ]}
+        >
+          <View style={styles.summaryHeader}>
+            <Text
+              style={[
+                styles.summaryHeaderTitle,
+                { color: paperTheme.colors.onSurface },
+              ]}
+            >
+              Summary
+            </Text>
+            <Text
+              style={[
+                styles.summaryHeaderMeta,
+                { color: paperTheme.colors.onSurfaceVariant },
+              ]}
+            >
+              {summary.total} days
+            </Text>
+          </View>
+          <View style={styles.summaryGrid}>
+            {summaryCards.map(({ key, ...card }) => (
+              <SummaryCard key={key} {...card} />
+            ))}
+          </View>
         </View>
       ) : null}
 
@@ -788,41 +872,76 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
+  summaryWrap: {
+    marginBottom: 16,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 8,
+    gap: 6,
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 2,
+  },
+  summaryHeaderTitle: {
+    fontFamily: fonts.PoppinsSemiBold,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  summaryHeaderMeta: {
+    fontFamily: fonts.InterRegular,
+    fontSize: 11,
+    lineHeight: 14,
+  },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 20,
+    gap: 6,
   },
   summaryCard: {
     width: "48%",
     flexGrow: 1,
     flexBasis: "46%",
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
+    flexDirection: "row",
     alignItems: "center",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: { elevation: 2 },
-    }),
+    gap: 7,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
+  },
+  summaryIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  summaryTextCol: {
+    flex: 1,
+    gap: 1,
+  },
+  summaryValueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 4,
   },
   summaryValue: {
     fontFamily: fonts.PoppinsBold,
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 17,
+    lineHeight: 20,
+  },
+  summaryShare: {
+    fontFamily: fonts.PoppinsMedium,
+    fontSize: 10,
+    lineHeight: 12,
   },
   summaryLabel: {
-    marginTop: 4,
-    fontFamily: fonts.PoppinsMedium,
-    fontSize: 13,
-    lineHeight: 18,
+    fontFamily: fonts.InterRegular,
+    fontSize: 10,
+    lineHeight: 12,
   },
   sectionTitle: {
     marginBottom: 10,

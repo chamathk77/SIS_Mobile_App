@@ -4,9 +4,15 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "prebuild:android": "expo prebuild --platform android --clean",
+    "keystore:generate": "bash scripts/generate-release-keystore.sh",
+    "build:apk": "cd android && ./gradlew assembleRelease",
+    "build:apk:debug": "cd android && ./gradlew assembleDebug",
+    "build:apk:release": "npm run build:apk",
+    "build:apk:eas": "eas build --platform android --profile release-apk --non-interactive"
   },
   "dependencies": {
     "@expo/ngrok": "^4.1.3",

@@ -8,7 +8,7 @@ import { useTheme } from "../context/ThemeContext";
 import { MainBottomTabParamList } from "./BottomTabParamList";
 import HomeScreen from "../screens/dashboard/HomeScreen";
 import AttendanceScreen from "../screens/dashboard/AttendanceScreen";
-import InvoiceScreen from "../screens/dashboard/InvoiceScreen";
+import InvoiceScreen from "../screens/dashboard/FinanceScreen";
 import TimeTableScreen from "../screens/dashboard/TimeTableScreen";
 import CalendarScreen from "../screens/dashboard/CalendarScreen";
 
@@ -44,8 +44,8 @@ export default function MainBottomTabNavigator() {
             iconName = focused ? "home" : "home-outline";
           } else if (route.name === "Attendance") {
             iconName = focused ? "checkmark-circle" : "checkmark-circle-outline";
-          } else if (route.name === "Invoice") {
-            iconName = focused ? "document-text" : "document-text-outline";
+          } else if (route.name === "Finance") {
+            iconName = focused ? "wallet" : "wallet-outline";
           } else if (route.name === "TimeTable") {
             iconName = focused ? "time" : "time-outline";
           } else if (route.name === "Calendar") {
@@ -136,7 +136,7 @@ export default function MainBottomTabNavigator() {
       />
 
       <Tab.Screen
-        name="Invoice"
+        name="Finance"
         component={InvoiceScreen}
         options={{
           tabBarLabel: ({ focused }) => (
@@ -150,7 +150,7 @@ export default function MainBottomTabNavigator() {
                 { fontWeight: focused ? "700" : "400" },
               ]}
             >
-              Invoice
+              Finance
             </Text>
           ),
         }}

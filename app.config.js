@@ -7,21 +7,21 @@ module.exports = ({ config }) => ({
     '@react-native-community/datetimepicker',
   ],
   splash: {
-    image: './assets/splash-icon.png',
+    image: './assets/eschola-icon.png',
     resizeMode: 'contain',
-    backgroundColor: '#6161DF',
+    backgroundColor: '#000000',
     dark: {
-      image: './assets/splash-icon.png',
+      image: './assets/eschola-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#6161DF',
+      backgroundColor: '#000000',
     },
   },
   ios: {
     ...config.ios,
     splash: {
-      image: './assets/splash-icon.png',
+      image: './assets/eschola-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#6161DF',
+      backgroundColor: '#000000',
     },
     infoPlist: {
       ...config.ios?.infoPlist,

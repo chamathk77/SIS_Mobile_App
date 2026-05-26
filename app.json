@@ -1,29 +1,49 @@
 {
   "expo": {
-    "name": "SIS_MobileApp",
+    "name": "Eschola SIS",
     "slug": "SIS_MobileApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/eschola-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/eschola-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "splash": {
+        "image": "./assets/eschola-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#000000"
+      },
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need camera access to capture photos for verification.",
+        "NSPhotoLibraryUsageDescription": "We need photo library access to upload verification images.",
+        "NSMicrophoneUsageDescription": "We need microphone access when recording audio in the app."
+      },
+      "bundleIdentifier": "com.anonymous.SIS-MobileApp"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/eschola-icon.png",
+        "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "package": "com.anonymous.SIS_MobileApp"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/eschola-favicon.png"
     }
   }
 }

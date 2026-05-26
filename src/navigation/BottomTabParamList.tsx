@@ -1,7 +1,7 @@
 export type MainBottomTabParamList = {
   HomeScreen: undefined;
   Attendance: undefined;
-  Invoice: undefined;
+  Finance: undefined;
   TimeTable: undefined;
   Calendar: undefined;
 };

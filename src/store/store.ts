@@ -4,6 +4,7 @@ import SystemInitializationReducer from '../store/reducers/SystemIntitialization
 import AuthReducer from '../store/reducers/AuthReducer';
 import StudentDataReducer from '../store/reducers/StudentDataReducer';
 import AttendanceReducer from '../store/reducers/AttendanceReducer';
+import InvoiceReducer from '../store/reducers/InvoiceReducer';
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ export const store = configureStore({
     AuthReducer: AuthReducer,
     StudentDataReducer: StudentDataReducer,
     AttendanceReducer: AttendanceReducer,
+    InvoiceReducer: InvoiceReducer,
   },
 });
 

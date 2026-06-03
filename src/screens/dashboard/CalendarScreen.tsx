@@ -1,8 +1,10 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -11,74 +13,140 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSelector } from "react-redux";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import { useDispatch, useSelector } from "react-redux";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { fonts } from "../../constants/fonts";
-import { RootState } from "../../store/store";
-import { DUMMY_CALENDAR } from "../../data/dummyCalendarData";
-import { AppliedCalendarFilters, CalendarEvent } from "../../type/calendar";
+import { AppDispatch, RootState } from "../../store/store";
+import { GetCalendarEvents_Service } from "../../services/CalendarService";
 import {
-  applyAttendanceDateChange,
-  formatDateForApi,
-  getToday,
-} from "../../utils/attendanceHelpers";
+  AppliedCalendarFilters,
+  CALENDAR_EVENT_TYPES,
+  CalendarEvent,
+  CalendarEventType,
+} from "../../type/calendar";
+import { getToday } from "../../utils/attendanceHelpers";
 import {
-  filterEventsByDateRange,
   filterEventsByMonth,
   formatCalendarDate,
   formatEventDateRange,
   formatEventTime,
   formatEventType,
   formatMonthYear,
-  getEventIconName,
+  getCalendarLastPage,
+  getEventIconForType,
+  getEventTitle,
+  getEventTypeColor,
+  getMonthBounds,
   groupEventsByDate,
+  isSchoolClosedEvent,
+  resolveCalendarColor,
+  resolveCalendarIcon,
   addMonths,
+  toDateKey,
 } from "../../utils/calendarHelpers";
-import { DateField } from "./finance/FinanceUi";
-
-type PickerTarget = "start" | "end" | null;
+import { uiStyles } from "./finance/FinanceUi";
+import { financeStyles } from "./finance/financeStyles";
 
 export default function CalendarScreen() {
   const { paperTheme, resolvedTheme } = useTheme();
-  const today = useMemo(() => getToday(), []);
+  const dispatch = useDispatch<AppDispatch>();
 
   const selectedStudentId = useSelector(
     (state: RootState) => state.StudentDataReducer.SelectStudent.selectedStudentId,
   );
+  const calendarPayload = useSelector(
+    (state: RootState) => state.CalendarReducer.data,
+  );
+  const isLoading = useSelector(
+    (state: RootState) => state.CalendarReducer.loading,
+  );
+  const calendarError = useSelector(
+    (state: RootState) => state.CalendarReducer.error,
+  );
 
-  const showCalendar = Boolean(selectedStudentId?.trim()) || true;
-  const allEvents = DUMMY_CALENDAR.events;
+  const hasStudent = Boolean(selectedStudentId?.trim());
+  const allEvents = calendarPayload?.data ?? [];
+  const meta = calendarPayload?.meta;
+  const lastPage = getCalendarLastPage(meta);
+  const canLoadMore = meta != null && meta.current_page < lastPage;
 
-  const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 4, 1));
-  const [draftFrom, setDraftFrom] = useState<Date | null>(null);
-  const [draftTo, setDraftTo] = useState<Date | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(() => getToday());
+  const [draftType, setDraftType] = useState<CalendarEventType | "">("");
   const [appliedFilters, setAppliedFilters] = useState<AppliedCalendarFilters>({});
-  const [filterError, setFilterError] = useState<string | null>(null);
-  const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
-  const [iosPickerDraft, setIosPickerDraft] = useState<Date | null>(null);
+  const [typePickerVisible, setTypePickerVisible] = useState(false);
+
+  const appliedFiltersRef = useRef(appliedFilters);
+  appliedFiltersRef.current = appliedFilters;
+  const pendingPageRef = useRef(1);
 
   const monthYear = currentMonth.getFullYear();
   const monthIndex = currentMonth.getMonth();
 
-  const monthEvents = useMemo(() => {
-    const inMonth = filterEventsByMonth(allEvents, monthYear, monthIndex);
-    return filterEventsByDateRange(
-      inMonth,
-      appliedFilters.from,
-      appliedFilters.to,
-    );
-  }, [allEvents, monthYear, monthIndex, appliedFilters]);
+  const monthRange = useMemo(() => {
+    const { start, end } = getMonthBounds(monthYear, monthIndex);
+    return { from: toDateKey(start), to: toDateKey(end) };
+  }, [monthYear, monthIndex]);
+
+  const fetchEvents = useCallback(
+    async (page = 1, filters?: AppliedCalendarFilters) => {
+      pendingPageRef.current = page;
+
+      const id = selectedStudentId?.trim();
+      if (!id) {
+        return;
+      }
+
+      const activeFilters = filters ?? appliedFiltersRef.current;
+
+      await dispatch(
+        GetCalendarEvents_Service({
+          student_id: String(id),
+          page,
+          from: monthRange.from,
+          to: monthRange.to,
+          ...(activeFilters.type ? { type: activeFilters.type } : {}),
+        }),
+      ).unwrap();
+    },
+    [dispatch, selectedStudentId, monthRange],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (selectedStudentId?.trim()) {
+        void fetchEvents(1);
+      }
+    }, [selectedStudentId, fetchEvents]),
+  );
+
+  useEffect(() => {
+    if (hasStudent) {
+      void fetchEvents(1);
+    }
+  }, [monthRange, hasStudent, fetchEvents]);
+
+  const monthEvents = useMemo(
+    () => filterEventsByMonth(allEvents, monthYear, monthIndex),
+    [allEvents, monthYear, monthIndex],
+  );
 
   const groupedEvents = useMemo(
     () => groupEventsByDate(monthEvents),
     [monthEvents],
   );
 
-  const hasActiveFilters = Boolean(appliedFilters.from || appliedFilters.to);
+  const hasActiveFilters = Boolean(appliedFilters.type);
+
+  const draftTypeLabel = draftType ? formatEventType(draftType) : "All types";
+
+  const loadMoreEvents = useCallback(() => {
+    if (!canLoadMore || isLoading || !hasStudent) {
+      return;
+    }
+    void fetchEvents((meta?.current_page ?? 1) + 1);
+  }, [canLoadMore, isLoading, hasStudent, meta?.current_page, fetchEvents]);
 
   const handlePrevMonth = () => {
     setCurrentMonth((prev) => addMonths(prev, -1));
@@ -89,129 +157,20 @@ export default function CalendarScreen() {
   };
 
   const handleSearch = useCallback(() => {
-    const hasStart = draftFrom != null;
-    const hasEnd = draftTo != null;
-
-    if (hasStart !== hasEnd) {
-      setFilterError("Select both start and end date.");
-      return;
-    }
-
-    if (hasStart && hasEnd && draftFrom! > draftTo!) {
-      setFilterError("Start date must be on or before end date.");
-      return;
-    }
-
-    if (hasStart && hasEnd && (draftFrom! > today || draftTo! > today)) {
-      setFilterError("Dates cannot be in the future.");
-      return;
-    }
-
-    setFilterError(null);
-    setAppliedFilters(
-      hasStart && hasEnd
-        ? { from: formatDateForApi(draftFrom!), to: formatDateForApi(draftTo!) }
-        : {},
-    );
-  }, [draftFrom, draftTo, today]);
+    const filters: AppliedCalendarFilters = draftType ? { type: draftType } : {};
+    setAppliedFilters(filters);
+    void fetchEvents(1, filters);
+  }, [draftType, fetchEvents]);
 
   const handleClearFilters = useCallback(() => {
-    setDraftFrom(null);
-    setDraftTo(null);
+    setDraftType("");
     setAppliedFilters({});
-    setFilterError(null);
-  }, []);
-
-  const openDatePicker = useCallback(
-    (target: "start" | "end") => {
-      setPickerTarget(target);
-      setIosPickerDraft(
-        target === "start" ? draftFrom ?? draftTo ?? today : draftTo ?? draftFrom ?? today,
-      );
-    },
-    [draftFrom, draftTo, today],
-  );
-
-  const onPickerChange = useCallback(
-    (event: DateTimePickerEvent, date?: Date) => {
-      if (Platform.OS === "android") {
-        setPickerTarget(null);
-        if (event.type === "dismissed" || !date) {
-          return;
-        }
-        if (pickerTarget === "start") {
-          if (draftTo) {
-            const next = applyAttendanceDateChange(date, draftTo, "start", date);
-            setDraftFrom(next.from);
-            setDraftTo(next.to);
-          } else {
-            setDraftFrom(date);
-          }
-        } else if (pickerTarget === "end") {
-          if (draftFrom) {
-            const next = applyAttendanceDateChange(draftFrom, date, "end", date);
-            setDraftFrom(next.from);
-            setDraftTo(next.to);
-          } else {
-            setDraftTo(date);
-          }
-        }
-        setFilterError(null);
-        return;
-      }
-      if (date) {
-        setIosPickerDraft(date);
-      }
-    },
-    [pickerTarget, draftFrom, draftTo],
-  );
-
-  const confirmIosPicker = useCallback(() => {
-    if (iosPickerDraft && pickerTarget === "start") {
-      if (draftTo) {
-        const next = applyAttendanceDateChange(iosPickerDraft, draftTo, "start", iosPickerDraft);
-        setDraftFrom(next.from);
-        setDraftTo(next.to);
-      } else {
-        setDraftFrom(iosPickerDraft);
-      }
-      setFilterError(null);
-    } else if (iosPickerDraft && pickerTarget === "end") {
-      if (draftFrom) {
-        const next = applyAttendanceDateChange(draftFrom, iosPickerDraft, "end", iosPickerDraft);
-        setDraftFrom(next.from);
-        setDraftTo(next.to);
-      } else {
-        setDraftTo(iosPickerDraft);
-      }
-      setFilterError(null);
-    }
-    setPickerTarget(null);
-    setIosPickerDraft(null);
-  }, [iosPickerDraft, pickerTarget, draftFrom, draftTo]);
-
-  const cancelIosPicker = useCallback(() => {
-    setPickerTarget(null);
-    setIosPickerDraft(null);
-  }, []);
-
-  const pickerValue =
-    iosPickerDraft ??
-    (pickerTarget === "start"
-      ? draftFrom ?? draftTo ?? today
-      : draftTo ?? draftFrom ?? today);
-  const pickerMaximumDate =
-    pickerTarget === "end"
-      ? today
-      : pickerTarget === "start"
-        ? draftTo && draftTo < today
-          ? draftTo
-          : today
-        : today;
-  const pickerMinimumDate = pickerTarget === "end" ? draftFrom ?? undefined : undefined;
+    void fetchEvents(1, {});
+  }, [fetchEvents]);
 
   function renderEvent(event: CalendarEvent) {
-    const iconName = getEventIconName(event.icon);
+    const color = resolveCalendarColor(event.color) ?? getEventTypeColor(event.type);
+    const iconName = resolveCalendarIcon(event.icon) ?? getEventIconForType(event.type);
 
     return (
       <View
@@ -224,20 +183,17 @@ export default function CalendarScreen() {
           },
         ]}
       >
-        <View style={[styles.eventAccent, { backgroundColor: event.color }]} />
+        <View style={[styles.eventAccent, { backgroundColor: color }]} />
         <View style={styles.eventBody}>
           <View style={styles.eventHeader}>
             <View
-              style={[
-                styles.eventIconWrap,
-                { backgroundColor: `${event.color}22` },
-              ]}
+              style={[styles.eventIconWrap, { backgroundColor: `${color}22` }]}
             >
-              <Ionicons name={iconName} size={18} color={event.color} />
+              <Ionicons name={iconName} size={18} color={color} />
             </View>
             <View style={styles.eventHeaderMain}>
-              <Text style={[styles.eventName, { color: paperTheme.colors.onSurface }]}>
-                {event.name}
+              <Text style={[styles.eventName, { color }]}>
+                {getEventTitle(event)}
               </Text>
               <Text
                 style={[
@@ -245,7 +201,7 @@ export default function CalendarScreen() {
                   { color: paperTheme.colors.onSurfaceVariant },
                 ]}
               >
-                {formatEventType(event.type)} · {event.category}
+                {formatEventType(event.type)}
               </Text>
             </View>
           </View>
@@ -286,7 +242,7 @@ export default function CalendarScreen() {
                 </Text>
               </View>
             ) : null}
-            {event.closes_school ? (
+            {isSchoolClosedEvent(event) ? (
               <View
                 style={[
                   styles.tag,
@@ -303,7 +259,7 @@ export default function CalendarScreen() {
                 </Text>
               </View>
             ) : null}
-            {event.is_recurring ? (
+            {event.category ? (
               <View
                 style={[
                   styles.tag,
@@ -316,7 +272,10 @@ export default function CalendarScreen() {
                     { color: paperTheme.colors.onPrimaryContainer },
                   ]}
                 >
-                  Recurring
+                  {event.category
+                    .split("_")
+                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(" ")}
                 </Text>
               </View>
             ) : null}
@@ -347,24 +306,38 @@ export default function CalendarScreen() {
   return (
     <>
       <Modal
-        visible={pickerTarget != null && Platform.OS === "ios"}
+        visible={isLoading && allEvents.length === 0}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={financeStyles.loadingOverlay}>
+          <ActivityIndicator size="large" color={paperTheme.colors.primary} />
+        </View>
+      </Modal>
+
+      <Modal
+        visible={typePickerVisible}
         transparent
         animationType="slide"
-        onRequestClose={cancelIosPicker}
+        onRequestClose={() => setTypePickerVisible(false)}
       >
-        <Pressable style={styles.pickerBackdrop} onPress={cancelIosPicker}>
+        <Pressable
+          style={financeStyles.pickerBackdrop}
+          onPress={() => setTypePickerVisible(false)}
+        >
           <Pressable
             style={[
-              styles.pickerSheet,
+              financeStyles.pickerSheet,
               { backgroundColor: paperTheme.colors.surface },
             ]}
             onPress={(e) => e.stopPropagation()}
           >
-            <View style={styles.pickerHeader}>
-              <TouchableOpacity onPress={cancelIosPicker}>
+            <View style={financeStyles.pickerHeader}>
+              <TouchableOpacity onPress={() => setTypePickerVisible(false)}>
                 <Text
                   style={[
-                    styles.pickerAction,
+                    financeStyles.pickerAction,
                     { color: paperTheme.colors.onSurfaceVariant },
                   ]}
                 >
@@ -372,43 +345,63 @@ export default function CalendarScreen() {
                 </Text>
               </TouchableOpacity>
               <Text
-                style={[styles.pickerTitle, { color: paperTheme.colors.onSurface }]}
+                style={[financeStyles.pickerTitle, { color: paperTheme.colors.onSurface }]}
               >
-                {pickerTarget === "start" ? "Start date" : "End date"}
+                Event type
               </Text>
-              <TouchableOpacity onPress={confirmIosPicker}>
+              <View style={financeStyles.pickerAction} />
+            </View>
+            <ScrollView style={financeStyles.statusList}>
+              <TouchableOpacity
+                style={[
+                  financeStyles.statusOption,
+                  !draftType && {
+                    backgroundColor: paperTheme.colors.primaryContainer,
+                  },
+                ]}
+                onPress={() => {
+                  setDraftType("");
+                  setTypePickerVisible(false);
+                }}
+              >
                 <Text
-                  style={[styles.pickerAction, { color: paperTheme.colors.primary }]}
+                  style={[
+                    financeStyles.statusOptionText,
+                    { color: paperTheme.colors.onSurface },
+                  ]}
                 >
-                  Done
+                  All types
                 </Text>
               </TouchableOpacity>
-            </View>
-            {pickerTarget != null ? (
-              <DateTimePicker
-                value={pickerValue}
-                mode="date"
-                display="spinner"
-                maximumDate={pickerMaximumDate}
-                minimumDate={pickerMinimumDate}
-                onChange={onPickerChange}
-                themeVariant={resolvedTheme === "dark" ? "dark" : "light"}
-              />
-            ) : null}
+              {CALENDAR_EVENT_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    financeStyles.statusOption,
+                    draftType === type && {
+                      backgroundColor: paperTheme.colors.primaryContainer,
+                    },
+                  ]}
+                  onPress={() => {
+                    setDraftType(type);
+                    setTypePickerVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      financeStyles.statusOptionText,
+                      { color: paperTheme.colors.onSurface },
+                    ]}
+                  >
+                    {formatEventType(type)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </Pressable>
+
         </Pressable>
       </Modal>
-
-      {Platform.OS === "android" && pickerTarget != null ? (
-        <DateTimePicker
-          value={pickerValue}
-          mode="date"
-          display="default"
-          maximumDate={pickerMaximumDate}
-          minimumDate={pickerMinimumDate}
-          onChange={onPickerChange}
-        />
-      ) : null}
 
       <SafeAreaView
         style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]}
@@ -423,12 +416,28 @@ export default function CalendarScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading && allEvents.length > 0 && pendingPageRef.current === 1}
+              onRefresh={() => void fetchEvents(1)}
+              tintColor={paperTheme.colors.primary}
+            />
+          }
+          onScroll={({ nativeEvent }) => {
+            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+            const nearBottom =
+              layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
+            if (nearBottom) {
+              loadMoreEvents();
+            }
+          }}
+          scrollEventThrottle={400}
         >
           <Text style={[styles.screenTitle, { color: paperTheme.colors.onSurface }]}>
             Calendar
           </Text>
 
-          {!showCalendar ? (
+          {!hasStudent ? (
             <Text
               style={[styles.hintText, { color: paperTheme.colors.onSurfaceVariant }]}
             >
@@ -448,35 +457,44 @@ export default function CalendarScreen() {
                 <Text
                   style={[styles.filterTitle, { color: paperTheme.colors.onSurface }]}
                 >
-                  Filter by date range
+                  Filter events
                 </Text>
 
-                <View style={styles.dateRow}>
-                  <DateField
-                    label="From"
-                    value={draftFrom}
-                    onPress={() => openDatePicker("start")}
-                    borderColor={paperTheme.colors.outline}
-                    backgroundColor={paperTheme.colors.surfaceVariant}
-                    labelColor={paperTheme.colors.onSurfaceVariant}
-                    valueColor={paperTheme.colors.onSurface}
-                  />
-                  <DateField
-                    label="To"
-                    value={draftTo}
-                    onPress={() => openDatePicker("end")}
-                    borderColor={paperTheme.colors.outline}
-                    backgroundColor={paperTheme.colors.surfaceVariant}
-                    labelColor={paperTheme.colors.onSurfaceVariant}
-                    valueColor={paperTheme.colors.onSurface}
-                  />
-                </View>
-
-                {filterError ? (
-                  <Text style={[styles.filterError, { color: paperTheme.colors.error }]}>
-                    {filterError}
+                <TouchableOpacity
+                  style={[
+                    financeStyles.statusField,
+                    {
+                      borderColor: paperTheme.colors.outline,
+                      backgroundColor: paperTheme.colors.surfaceVariant,
+                    },
+                  ]}
+                  onPress={() => setTypePickerVisible(true)}
+                  activeOpacity={0.85}
+                >
+                  <Text
+                    style={[
+                      uiStyles.dateFieldLabel,
+                      { color: paperTheme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Event type
                   </Text>
-                ) : null}
+                  <View style={uiStyles.dateFieldRow}>
+                    <Text
+                      style={[ 
+                        uiStyles.dateFieldValue,
+                        { color: paperTheme.colors.onSurface },
+                      ]}
+                    >
+                      {draftTypeLabel}
+                    </Text>
+                    <Ionicons
+                      name="chevron-down"
+                      size={18}
+                      color={paperTheme.colors.onSurfaceVariant}
+                    />
+                  </View>
+                </TouchableOpacity>
 
                 <View style={styles.filterActions}>
                   <TouchableOpacity
@@ -530,8 +548,7 @@ export default function CalendarScreen() {
                       { color: paperTheme.colors.onSurfaceVariant },
                     ]}
                   >
-                    Showing {formatCalendarDate(appliedFilters.from!)} –{" "}
-                    {formatCalendarDate(appliedFilters.to!)}
+                    {formatEventType(appliedFilters.type!)}
                   </Text>
                 ) : null}
               </View>
@@ -620,11 +637,58 @@ export default function CalendarScreen() {
                       { color: paperTheme.colors.onSurfaceVariant },
                     ]}
                   >
-                    No events for {formatMonthYear(monthYear, monthIndex)}
-                    {hasActiveFilters ? " in this date range" : ""}.
+                    {calendarError ??
+                      `No events for ${formatMonthYear(monthYear, monthIndex)}${hasActiveFilters ? " with these filters" : ""}.`}
                   </Text>
                 </View>
               )}
+
+              {canLoadMore && !isLoading ? (
+                <View style={financeStyles.listFooter}>
+                  <Text
+                    style={[
+                      financeStyles.listFooterLoadingText,
+                      { color: paperTheme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Scroll for more events…
+                  </Text>
+                </View>
+              ) : null}
+
+              {!canLoadMore && allEvents.length > 0 && !isLoading ? (
+                <View style={financeStyles.listFooter}>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={22}
+                    color={paperTheme.colors.onSurfaceVariant}
+                  />
+                  <Text
+                    style={[
+                      financeStyles.listEndTitle,
+                      { color: paperTheme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    You're all caught up
+                  </Text>
+                  {meta?.total != null ? (
+                    <Text
+                      style={[
+                        financeStyles.listEndSubtitle,
+                        { color: paperTheme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {meta.total} event{meta.total === 1 ? "" : "s"} loaded
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {isLoading && allEvents.length > 0 && pendingPageRef.current > 1 ? (
+                <View style={financeStyles.listFooter}>
+                  <ActivityIndicator size="small" color={paperTheme.colors.primary} />
+                </View>
+              ) : null}
             </>
           )}
         </ScrollView>
@@ -670,15 +734,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.PoppinsSemiBold,
     fontSize: 15,
     lineHeight: 20,
-  },
-  dateRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  filterError: {
-    fontFamily: fonts.InterRegular,
-    fontSize: 12,
-    lineHeight: 16,
   },
   filterActions: {
     flexDirection: "row",
@@ -853,33 +908,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
-  },
-  pickerBackdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-  },
-  pickerSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: Platform.OS === "ios" ? 24 : 0,
-  },
-  pickerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(128,128,128,0.3)",
-  },
-  pickerTitle: {
-    fontFamily: fonts.PoppinsSemiBold,
-    fontSize: 15,
-  },
-  pickerAction: {
-    fontFamily: fonts.PoppinsMedium,
-    fontSize: 15,
-    minWidth: 60,
   },
 });

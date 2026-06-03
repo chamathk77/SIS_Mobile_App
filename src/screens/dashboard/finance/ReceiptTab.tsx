@@ -114,7 +114,7 @@ export default function ReceiptTab() {
         }
 
         const activeFilters = filters ?? appliedFiltersRef.current;
-        await dispatch(
+       const response = await dispatch(
           GetReceipts_Service({
             student_id: String(id),
             page,
@@ -123,6 +123,7 @@ export default function ReceiptTab() {
             ...(activeFilters.method ? { method: activeFilters.method } : {}),
           }),
         ).unwrap();
+        console.log("response get receipts", JSON.stringify(response, null, 2));
       } catch (error: any) {
         show_Alert(
           "error",

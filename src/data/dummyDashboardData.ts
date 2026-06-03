@@ -1,10 +1,11 @@
-import { DUMMY_CALENDAR } from "./dummyCalendarData";
+import { DUMMY_CALENDAR_EVENTS } from "./dummyCalendarData";
 import { DUMMY_INVOICE_SUMMARY, DUMMY_INVOICES } from "./dummyInvoiceData";
 import { DUMMY_TIMETABLE } from "./dummyTimetableData";
 import { CalendarEvent } from "../type/calendar";
 import { Invoice } from "../type/invoice";
 import { TimetableSlot } from "../type/timetable";
 import { DayOfWeek } from "../type/timetable";
+import { getUpcomingEvents } from "../utils/calendarHelpers";
 import { getSlotsForDay } from "../utils/timetableHelpers";
 
 export type DashboardAttendanceSummary = {
@@ -43,14 +44,6 @@ function getTodayDayOfWeek(): DayOfWeek {
   return DAY_NAMES[new Date().getDay()];
 }
 
-function getUpcomingEvents(limit = 3): CalendarEvent[] {
-  const todayKey = new Date().toISOString().slice(0, 10);
-  return [...DUMMY_CALENDAR.events]
-    .filter((event) => event.date >= todayKey)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, limit);
-}
-
 export const DUMMY_DASHBOARD: DashboardData = {
   attendance: {
     present: 12,
@@ -62,7 +55,7 @@ export const DUMMY_DASHBOARD: DashboardData = {
   },
   finance: { ...DUMMY_INVOICE_SUMMARY },
   classInfo: DUMMY_TIMETABLE.class,
-  upcomingEvents: getUpcomingEvents(4),
+  upcomingEvents: getUpcomingEvents(DUMMY_CALENDAR_EVENTS, 4),
   todaySchedule: getSlotsForDay(DUMMY_TIMETABLE, getTodayDayOfWeek()).filter(
     (slot) => !slot.period.is_break,
   ),

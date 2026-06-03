@@ -1,4 +1,77 @@
-import { CalendarEvent, CalendarEventType } from "../type/calendar";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  CalendarEvent,
+  CalendarEventType,
+  CalendarMeta,
+} from "../type/calendar";
+
+const EVENT_TYPE_COLORS: Record<string, string> = {
+  holiday: "#ef4444",
+  exam: "#f59e0b",
+  sports_meet: "#10b981",
+  parent_meeting: "#2563eb",
+  field_trip: "#8b5cf6",
+  ceremony: "#ec4899",
+  meeting: "#6366f1",
+  other: "#64748b",
+};
+
+export function getCalendarLastPage(meta: CalendarMeta | undefined): number {
+  if (!meta) {
+    return 1;
+  }
+  if (meta.last_page != null && meta.last_page > 0) {
+    return meta.last_page;
+  }
+  return Math.max(1, Math.ceil(meta.total / meta.per_page));
+}
+
+export function getEventStartDate(event: CalendarEvent): string {
+  return event.date ?? event.date_from ?? "";
+}
+
+export function getEventEndDate(event: CalendarEvent): string {
+  if (event.date) {
+    return event.date;
+  }
+  return event.date_to ?? event.date_from ?? "";
+}
+
+export function getEventTitle(event: CalendarEvent): string {
+  return event.title?.trim() || "Event";
+}
+
+export function getEventTypeColor(type: CalendarEventType | string): string {
+  return EVENT_TYPE_COLORS[type] ?? EVENT_TYPE_COLORS.other;
+}
+
+export function resolveCalendarColor(color?: string | null): string | null {
+  if (!color) {
+    return null;
+  }
+  const value = color.trim().toLowerCase();
+  if (!value) {
+    return null;
+  }
+  if (value.startsWith("#")) {
+    return color;
+  }
+  const map: Record<string, string> = {
+    green: "#22c55e",
+    red: "#ef4444",
+    orange: "#f97316",
+    purple: "#a855f7",
+    blue: "#3b82f6",
+    yellow: "#eab308",
+    gray: "#64748b",
+    grey: "#64748b",
+  };
+  return map[value] ?? null;
+}
+
+export function isSchoolClosedEvent(event: CalendarEvent): boolean {
+  return event.type === "holiday";
+}
 
 export function formatCalendarDate(isoDate: string): string {
   if (!isoDate?.trim()) {
@@ -38,11 +111,6 @@ export function toDateKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function parseDateKey(key: string): Date {
-  const [year, month, day] = key.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
 export function getMonthBounds(year: number, month: number) {
   const start = new Date(year, month, 1);
   const end = new Date(year, month + 1, 0);
@@ -53,13 +121,27 @@ export function addMonths(base: Date, delta: number): Date {
   return new Date(base.getFullYear(), base.getMonth() + delta, 1);
 }
 
+export function getDefaultCalendarRange(reference = new Date()) {
+  const from = new Date(
+    reference.getFullYear(),
+    reference.getMonth(),
+    reference.getDate(),
+  );
+  const to = new Date(from);
+  to.setDate(to.getDate() + 60);
+  return { from: toDateKey(from), to: toDateKey(to) };
+}
+
 export function eventOverlapsRange(
   event: CalendarEvent,
   from: string,
   to: string,
 ): boolean {
-  const eventStart = event.date;
-  const eventEnd = event.end_date ?? event.date;
+  const eventStart = getEventStartDate(event);
+  const eventEnd = getEventEndDate(event);
+  if (!eventStart) {
+    return false;
+  }
   return eventStart <= to && eventEnd >= from;
 }
 
@@ -95,7 +177,10 @@ export function groupEventsByDate(
   const map = new Map<string, CalendarEvent[]>();
 
   for (const event of events) {
-    const key = event.date;
+    const key = getEventStartDate(event);
+    if (!key) {
+      continue;
+    }
     const list = map.get(key) ?? [];
     list.push(event);
     map.set(key, list);
@@ -112,7 +197,7 @@ export function groupEventsByDate(
         if (!a.is_all_day && b.is_all_day) {
           return 1;
         }
-        return (a.start_at ?? "").localeCompare(b.start_at ?? "");
+        return (a.start_time ?? "").localeCompare(b.start_time ?? "");
       }),
     }));
 }
@@ -129,26 +214,75 @@ export function formatEventType(type: CalendarEventType): string {
 
 export function formatEventTime(event: CalendarEvent): string {
   if (event.is_all_day) {
-    return "All day";
+    return "";
   }
-  if (event.start_at && event.end_at) {
-    return `${event.start_at} – ${event.end_at}`;
+  if (event.start_time && event.end_time) {
+    return `${event.start_time} – ${event.end_time}`;
   }
-  if (event.start_at) {
-    return event.start_at;
+  if (event.start_time) {
+    return event.start_time;
   }
   return "";
 }
 
 export function formatEventDateRange(event: CalendarEvent): string {
-  if (event.end_date && event.end_date !== event.date) {
-    return `${formatCalendarDate(event.date)} – ${formatCalendarDate(event.end_date)}`;
+  const start = getEventStartDate(event);
+  const end = getEventEndDate(event);
+  if (end && end !== start) {
+    return `${formatCalendarDate(start)} – ${formatCalendarDate(end)}`;
   }
-  return formatCalendarDate(event.date);
+  return formatCalendarDate(start);
 }
 
-import { Ionicons } from "@expo/vector-icons";
+export function getEventIconForType(
+  type: CalendarEventType | string,
+): keyof typeof Ionicons.glyphMap {
+  const map: Record<string, keyof typeof Ionicons.glyphMap> = {
+    holiday: "sunny-outline",
+    exam: "document-text-outline",
+    sports_meet: "football-outline",
+    parent_meeting: "people-outline",
+    field_trip: "bus-outline",
+    ceremony: "ribbon-outline",
+    meeting: "people-circle-outline",
+    other: "calendar-outline",
+  };
 
+  return map[type] ?? "calendar-outline";
+}
+
+export function resolveCalendarIcon(
+  icon?: string | null,
+): keyof typeof Ionicons.glyphMap | null {
+  if (!icon) {
+    return null;
+  }
+  const value = icon.trim().toLowerCase();
+  if (!value) {
+    return null;
+  }
+
+  const map: Record<string, keyof typeof Ionicons.glyphMap> = {
+    users: "people-outline",
+    "building-library": "business-outline",
+    briefcase: "briefcase-outline",
+    moon: "moon-outline",
+    sun: "sunny-outline",
+    football: "football-outline",
+    book: "book-outline",
+    flask: "flask-outline",
+    school: "school-outline",
+    flag: "flag-outline",
+    laptop: "laptop-outline",
+    megaphone: "megaphone-outline",
+    "document-text": "document-text-outline",
+    "color-palette": "color-palette-outline",
+  };
+
+  return map[value] ?? null;
+}
+
+/** @deprecated use getEventIconForType */
 export function getEventIconName(
   icon: string,
 ): keyof typeof Ionicons.glyphMap {
@@ -170,4 +304,15 @@ export function getEventIconName(
   };
 
   return map[icon] ?? "calendar-outline";
+}
+
+export function getUpcomingEvents(
+  events: CalendarEvent[],
+  limit = 4,
+): CalendarEvent[] {
+  const todayKey = toDateKey(new Date());
+  return [...events]
+    .filter((event) => getEventEndDate(event) >= todayKey)
+    .sort((a, b) => getEventStartDate(a).localeCompare(getEventStartDate(b)))
+    .slice(0, limit);
 }

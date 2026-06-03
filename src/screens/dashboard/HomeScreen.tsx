@@ -47,7 +47,13 @@ import {
 import { formatInvoiceStatus } from "../../utils/invoiceHelpers";
 import { DayOfWeek } from "../../type/timetable";
 import { formatDayFull, formatPeriodTime } from "../../utils/timetableHelpers";
-import { getEventIconName } from "../../utils/calendarHelpers";
+import {
+  formatEventDateRange,
+  getEventIconForType,
+  getEventTitle,
+  getEventTypeColor,
+  isSchoolClosedEvent,
+} from "../../utils/calendarHelpers";
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainBottomTabParamList, "HomeScreen">,
@@ -592,20 +598,20 @@ export default function HomeScreen() {
               <View
                 style={[
                   styles.eventIcon,
-                  { backgroundColor: `${event.color}22` },
+                  { backgroundColor: `${getEventTypeColor(event.type)}22` },
                 ]}
               >
                 <Ionicons
-                  name={getEventIconName(event.icon)}
+                  name={getEventIconForType(event.type)}
                   size={18}
-                  color={event.color}
+                  color={getEventTypeColor(event.type)}
                 />
               </View>
               <View style={styles.eventBody}>
                 <Text
                   style={[styles.eventName, { color: paperTheme.colors.onSurface }]}
                 >
-                  {event.name}
+                  {getEventTitle(event)}
                 </Text>
                 <Text
                   style={[
@@ -613,12 +619,12 @@ export default function HomeScreen() {
                     { color: paperTheme.colors.onSurfaceVariant },
                   ]}
                 >
-                  {formatCalendarDate(event.date)}
-                  {event.closes_school ? " · School closed" : ""}
+                  {formatEventDateRange(event)}
+                  {isSchoolClosedEvent(event) ? " · School closed" : ""}
                 </Text>
               </View>
               <View
-                style={[styles.eventDot, { backgroundColor: event.color }]}
+                style={[styles.eventDot, { backgroundColor: getEventTypeColor(event.type) }]}
               />
             </TouchableOpacity>
           ))

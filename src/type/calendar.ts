@@ -1,47 +1,68 @@
 export type CalendarEventType =
   | "holiday"
   | "exam"
+  | "sports_meet"
+  | "parent_meeting"
+  | "field_trip"
+  | "ceremony"
   | "meeting"
-  | "activity"
-  | "announcement"
+  | "other"
   | string;
 
+export const CALENDAR_EVENT_TYPES: CalendarEventType[] = [
+  "holiday",
+  "exam",
+  "sports_meet",
+  "parent_meeting",
+  "field_trip",
+  "ceremony",
+  "meeting",
+  "other",
+];
+
+/** API event — single-day uses `date`; multi-day uses `date_from` / `date_to`. */
 export interface CalendarEvent {
   id: number;
-  name: string;
-  description: string | null;
-  date: string;
-  end_date: string | null;
-  start_at: string | null;
-  end_at: string | null;
-  is_all_day: boolean;
-  closes_school: boolean;
-  is_recurring: boolean;
+  title: string;
+  name?: string;
   type: CalendarEventType;
-  category: string;
-  color: string;
-  icon: string;
-  location: string | null;
+  date?: string | null;
+  date_from?: string | null;
+  date_to?: string | null;
+  is_all_day: boolean;
+  description?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  location?: string | null;
+  color?: string | null;
+  icon?: string | null;
+  closes_school?: boolean;
+  category?: string | null;
 }
 
-export interface CalendarWindow {
-  from: string;
-  to: string;
+export interface CalendarMeta {
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page?: number;
 }
 
-export interface CalendarData {
-  student_id: number;
-  window: CalendarWindow;
-  events: CalendarEvent[];
+export interface GetCalendarEvents_Response {
+  success?: boolean;
+  message?: string;
+  data: CalendarEvent[];
+  meta: CalendarMeta;
 }
 
-export interface GetCalendar_Response {
-  success: boolean;
-  message: string;
-  data: CalendarData;
+export interface GetCalendarEvents_Request {
+  student_id: string;
+  page?: number;
+  per_page?: number;
+  from?: string;
+  to?: string;
+  type?: CalendarEventType | CalendarEventType[];
 }
 
 export type AppliedCalendarFilters = {
-  from?: string;
-  to?: string;
+  type?: CalendarEventType;
 };

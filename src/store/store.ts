@@ -6,6 +6,7 @@ import StudentDataReducer from '../store/reducers/StudentDataReducer';
 import AttendanceReducer from '../store/reducers/AttendanceReducer';
 import InvoiceReducer from '../store/reducers/InvoiceReducer';
 import ReceiptReducer from '../store/reducers/ReceiptReducer';
+import CalendarReducer from '../store/reducers/CalendarReducer';
 
 export const store = configureStore({
   reducer: {
@@ -15,6 +16,7 @@ export const store = configureStore({
     AttendanceReducer: AttendanceReducer,
     InvoiceReducer: InvoiceReducer,
     ReceiptReducer: ReceiptReducer,
+    CalendarReducer: CalendarReducer,
   },
 });
 

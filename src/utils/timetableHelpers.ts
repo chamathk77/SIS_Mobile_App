@@ -14,6 +14,118 @@ export const WEEKDAY_ORDER: DayOfWeek[] = [
   "sunday",
 ];
 
+/** Eschola API: Monday=1 … Friday=5, Saturday=6, Sunday=0 */
+const NUMERIC_DAY_MAP: Record<number, DayOfWeek> = {
+  0: "sunday",
+  1: "monday",
+  2: "tuesday",
+  3: "wednesday",
+  4: "thursday",
+  5: "friday",
+  6: "saturday",
+  7: "sunday",
+};
+
+const STRING_DAY_MAP: Record<string, DayOfWeek> = {
+  sunday: "sunday",
+  monday: "monday",
+  tuesday: "tuesday",
+  wednesday: "wednesday",
+  thursday: "thursday",
+  friday: "friday",
+  saturday: "saturday",
+};
+
+export function parseDayOfWeek(
+  value: number | string | undefined | null,
+): DayOfWeek | null {
+  if (value == null || value === "") {
+    return null;
+  }
+  if (typeof value === "string") {
+    const key = value.trim().toLowerCase();
+    if (STRING_DAY_MAP[key]) {
+      return STRING_DAY_MAP[key];
+    }
+    const asNumber = Number(key);
+    if (!Number.isNaN(asNumber)) {
+      return NUMERIC_DAY_MAP[asNumber] ?? null;
+    }
+    return null;
+  }
+  return NUMERIC_DAY_MAP[value] ?? null;
+}
+
+export function numericDayToDayOfWeek(value: number): DayOfWeek | null {
+  return parseDayOfWeek(value);
+}
+
+export function isBreakPeriod(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return (
+    normalized.includes("interval") ||
+    normalized.includes("break") ||
+    normalized.includes("lunch") ||
+    normalized.includes("recess")
+  );
+}
+
+export function periodShortName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return "—";
+  }
+  if (isBreakPeriod(trimmed)) {
+    return "INT";
+  }
+  const match = trimmed.match(/period\s*(\d+)/i);
+  if (match) {
+    return `P${match[1]}`;
+  }
+  return trimmed.slice(0, 3).toUpperCase();
+}
+
+export function toDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function getWeekStartMonday(date: Date): Date {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = start.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  start.setDate(start.getDate() + diff);
+  return start;
+}
+
+export function addWeeks(base: Date, delta: number): Date {
+  const next = new Date(base);
+  next.setDate(next.getDate() + delta * 7);
+  return next;
+}
+
+export function getWeekWindowFromWeekOf(weekOf: string): { from: string; to: string } {
+  if (!weekOf?.trim()) {
+    const start = getWeekStartMonday(new Date());
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return { from: toDateKey(start), to: toDateKey(end) };
+  }
+
+  const parts = weekOf.split("-").map(Number);
+  if (parts.length !== 3) {
+    return { from: weekOf, to: weekOf };
+  }
+
+  const [year, month, day] = parts;
+  const start = getWeekStartMonday(new Date(year, month - 1, day));
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return { from: toDateKey(start), to: toDateKey(end) };
+}
+
 const DAY_LABELS: Record<DayOfWeek, string> = {
   monday: "Mon",
   tuesday: "Tue",
@@ -114,6 +226,7 @@ export function getSlotsForDay(
 export function getSubjectColor(code: string | undefined): string {
   const palette: Record<string, string> = {
     MATH: "#D97706",
+    MAT: "#D97706",
     ENG: "#2563EB",
     SCI: "#15803D",
     SIN: "#7C3AED",

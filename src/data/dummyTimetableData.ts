@@ -1,7 +1,6 @@
 import { TimetableData } from "../type/timetable";
 
 export const DUMMY_TIMETABLE: TimetableData = {
-  student_id: 33,
   class: {
     id: 1,
     name: "Grade 1 - A",

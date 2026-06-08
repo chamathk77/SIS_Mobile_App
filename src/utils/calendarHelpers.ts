@@ -38,7 +38,7 @@ export function getEventEndDate(event: CalendarEvent): string {
 }
 
 export function getEventTitle(event: CalendarEvent): string {
-  return event.title?.trim() || "Event";
+  return event.name?.trim() || event.title?.trim() || "Event";
 }
 
 export function getEventTypeColor(type: CalendarEventType | string): string {
@@ -70,6 +70,9 @@ export function resolveCalendarColor(color?: string | null): string | null {
 }
 
 export function isSchoolClosedEvent(event: CalendarEvent): boolean {
+  if (event.closes_school === true) {
+    return true;
+  }
   return event.type === "holiday";
 }
 
@@ -315,4 +318,84 @@ export function getUpcomingEvents(
     .filter((event) => getEventEndDate(event) >= todayKey)
     .sort((a, b) => getEventStartDate(a).localeCompare(getEventStartDate(b)))
     .slice(0, limit);
+}
+
+export const CALENDAR_WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+export type CalendarGridCell = {
+  dateKey: string;
+  day: number;
+  inCurrentMonth: boolean;
+};
+
+export function buildMonthGrid(year: number, month: number): CalendarGridCell[] {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const mondayOffset = (new Date(year, month, 1).getDay() + 6) % 7;
+  const cells: CalendarGridCell[] = [];
+
+  for (let i = mondayOffset; i > 0; i--) {
+    const date = new Date(year, month, 1 - i);
+    cells.push({
+      dateKey: toDateKey(date),
+      day: date.getDate(),
+      inCurrentMonth: false,
+    });
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    cells.push({
+      dateKey: toDateKey(date),
+      day,
+      inCurrentMonth: true,
+    });
+  }
+
+  let trailingDay = 1;
+  while (cells.length % 7 !== 0) {
+    const date = new Date(year, month + 1, trailingDay++);
+    cells.push({
+      dateKey: toDateKey(date),
+      day: date.getDate(),
+      inCurrentMonth: false,
+    });
+  }
+
+  return cells;
+}
+
+/** Maps each date key to events that fall on that day (includes multi-day spans). */
+export function buildEventsByDateMap(
+  events: CalendarEvent[],
+): Map<string, CalendarEvent[]> {
+  const map = new Map<string, CalendarEvent[]>();
+
+  for (const event of events) {
+    const startKey = getEventStartDate(event);
+    const endKey = getEventEndDate(event) || startKey;
+    if (!startKey) {
+      continue;
+    }
+
+    const startParts = startKey.split("-").map(Number);
+    const endParts = endKey.split("-").map(Number);
+    const cursor = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+    const end = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+
+    while (cursor <= end) {
+      const key = toDateKey(cursor);
+      const list = map.get(key) ?? [];
+      if (!list.some((item) => item.id === event.id)) {
+        list.push(event);
+        map.set(key, list);
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  return map;
+}
+
+export function getPrimaryEventColor(event: CalendarEvent): string {
+  return resolveCalendarColor(event.color) ?? getEventTypeColor(event.type);
 }

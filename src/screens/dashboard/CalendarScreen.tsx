@@ -48,6 +48,7 @@ import {
 } from "../../utils/calendarHelpers";
 import { uiStyles } from "./finance/FinanceUi";
 import { financeStyles } from "./finance/financeStyles";
+import CalendarGridModal from "../../components/calendar/CalendarGridModal";
 
 export default function CalendarScreen() {
   const { paperTheme, resolvedTheme } = useTheme();
@@ -76,6 +77,7 @@ export default function CalendarScreen() {
   const [draftType, setDraftType] = useState<CalendarEventType | "">("");
   const [appliedFilters, setAppliedFilters] = useState<AppliedCalendarFilters>({});
   const [typePickerVisible, setTypePickerVisible] = useState(false);
+  const [calendarViewVisible, setCalendarViewVisible] = useState(false);
 
   const appliedFiltersRef = useRef(appliedFilters);
   appliedFiltersRef.current = appliedFilters;
@@ -259,27 +261,31 @@ export default function CalendarScreen() {
                 </Text>
               </View>
             ) : null}
-            {event.category ? (
-              <View
-                style={[
-                  styles.tag,
-                  { backgroundColor: paperTheme.colors.primaryContainer },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.tagText,
-                    { color: paperTheme.colors.onPrimaryContainer },
-                  ]}
-                >
-                  {event.category
-                    .split("_")
-                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                    .join(" ")}
-                </Text>
-              </View>
-            ) : null}
           </View>
+
+          {event.category && event.category.length > 0 ? (
+            <View style={styles.categoryTags}>
+              {event.category.map((cat) => {
+                const catColor =
+                  resolveCalendarColor(cat.color) ?? getEventTypeColor(event.type);
+                const catIcon = resolveCalendarIcon(cat.icon);
+
+                return (
+                  <View
+                    key={cat.value}
+                    style={[styles.categoryTag, { backgroundColor: `${catColor}22` }]}
+                  >
+                    {catIcon ? (
+                      <Ionicons name={catIcon} size={11} color={catColor} />
+                    ) : null}
+                    <Text style={[styles.tagText, { color: catColor }]}>
+                      {cat.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
 
           {event.location ? (
             <View style={styles.locationRow}>
@@ -403,6 +409,15 @@ export default function CalendarScreen() {
         </Pressable>
       </Modal>
 
+      <CalendarGridModal
+        visible={calendarViewVisible}
+        onClose={() => setCalendarViewVisible(false)}
+        events={allEvents}
+        month={currentMonth}
+        onMonthChange={setCurrentMonth}
+        theme={paperTheme}
+      />
+
       <SafeAreaView
         style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]}
         edges={["top"]}
@@ -433,9 +448,38 @@ export default function CalendarScreen() {
           }}
           scrollEventThrottle={400}
         >
-          <Text style={[styles.screenTitle, { color: paperTheme.colors.onSurface }]}>
-            Calendar
-          </Text>
+          <View style={styles.titleRow}>
+            <Text style={[styles.screenTitle, { color: paperTheme.colors.onSurface }]}>
+              Calendar
+            </Text>
+            {hasStudent ? (
+              <TouchableOpacity
+                style={[
+                  styles.monthViewButton,
+                  {
+                    backgroundColor: paperTheme.colors.primaryContainer,
+                    borderColor: paperTheme.colors.primary,
+                  },
+                ]}
+                onPress={() => setCalendarViewVisible(true)}
+                activeOpacity={0.85}
+              >
+                <Ionicons
+                  name="grid-outline"
+                  size={16}
+                  color={paperTheme.colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.monthViewButtonText,
+                    { color: paperTheme.colors.primary },
+                  ]}
+                >
+                  Month view
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
           {!hasStudent ? (
             <Text
@@ -704,11 +748,41 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 32,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 16,
+  },
   screenTitle: {
     fontFamily: fonts.PoppinsBold,
     fontSize: 28,
     lineHeight: 34,
-    marginBottom: 16,
+    flexShrink: 1,
+  },
+  monthViewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  monthViewButtonText: {
+    fontFamily: fonts.PoppinsSemiBold,
+    fontSize: 12,
+    lineHeight: 16,
   },
   hintText: {
     fontFamily: fonts.InterRegular,
@@ -877,7 +951,20 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 6,
   },
+  categoryTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
   tag: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  categoryTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,

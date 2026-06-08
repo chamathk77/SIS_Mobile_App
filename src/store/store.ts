@@ -7,6 +7,7 @@ import AttendanceReducer from '../store/reducers/AttendanceReducer';
 import InvoiceReducer from '../store/reducers/InvoiceReducer';
 import ReceiptReducer from '../store/reducers/ReceiptReducer';
 import CalendarReducer from '../store/reducers/CalendarReducer';
+import TimetableReducer from '../store/reducers/TimetableReducer';
 
 export const store = configureStore({
   reducer: {
@@ -17,6 +18,7 @@ export const store = configureStore({
     InvoiceReducer: InvoiceReducer,
     ReceiptReducer: ReceiptReducer,
     CalendarReducer: CalendarReducer,
+    TimetableReducer: TimetableReducer,
   },
 });
 

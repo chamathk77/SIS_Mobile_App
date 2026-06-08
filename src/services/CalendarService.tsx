@@ -3,6 +3,7 @@ import { apiClient } from "../config/apiConfig";
 import { ApiErrorResponse } from "../type/common";
 import {
   CalendarEvent,
+  CalendarEventCategory,
   CalendarMeta,
   GetCalendarEvents_Request,
   GetCalendarEvents_Response,
@@ -32,6 +33,56 @@ function buildCalendarQuery(params: GetCalendarEvents_Request): string {
   return query.toString();
 }
 
+function formatCategoryLabel(value: string): string {
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function normalizeCategory(raw: unknown): CalendarEventCategory[] | null {
+  if (!raw) {
+    return null;
+  }
+
+  if (Array.isArray(raw)) {
+    const items = raw
+      .map((item): CalendarEventCategory | null => {
+        if (typeof item === "string" && item.trim()) {
+          return {
+            value: item,
+            label: formatCategoryLabel(item),
+            color: null,
+            icon: null,
+          };
+        }
+        if (item && typeof item === "object") {
+          const entry = item as Record<string, unknown>;
+          const value = String(entry.value ?? entry.label ?? "").trim();
+          if (!value) {
+            return null;
+          }
+          return {
+            value,
+            label: String(entry.label ?? formatCategoryLabel(value)),
+            color: (entry.color as string | null | undefined) ?? null,
+            icon: (entry.icon as string | null | undefined) ?? null,
+          };
+        }
+        return null;
+      })
+      .filter((item): item is CalendarEventCategory => item != null);
+
+    return items.length > 0 ? items : null;
+  }
+
+  if (typeof raw === "string" && raw.trim()) {
+    return [{ value: raw, label: formatCategoryLabel(raw), color: null, icon: null }];
+  }
+
+  return null;
+}
+
 function normalizeCalendarEvent(event: any): CalendarEvent {
   return {
     id: Number(event?.id ?? 0),
@@ -49,7 +100,7 @@ function normalizeCalendarEvent(event: any): CalendarEvent {
     color: event?.color ?? null,
     icon: event?.icon ?? null,
     closes_school: Boolean(event?.closes_school),
-    category: event?.category ?? null,
+    category: normalizeCategory(event?.category),
   };
 }
 
@@ -69,6 +120,7 @@ export const GetCalendarEvents_Service = createAsyncThunk(
       );
 
       if (response.status === 200) {
+        console.log("response get calendar events", JSON.stringify(response.data, null, 2));
         const payload = response.data ?? {};
         const payloadData = payload.data ?? {};
 

@@ -38,6 +38,7 @@ export const CalendarSlice = createSlice({
     });
     builder.addCase(GetCalendarEvents_Service.fulfilled, (state, action) => {
       devLog("Get Calendar Events Fulfilled:", action.payload);
+      console.log("Get Calendar Events Fulfilled:", JSON.stringify(action.payload, null, 2));
       state.loading = false;
       state.success = true;
       state.error = null;

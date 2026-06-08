@@ -1,5 +1,12 @@
+require('dotenv').config();
+
 module.exports = ({ config }) => ({
   ...config,
+  extra: {
+    ...config.extra,
+    baseUrl: process.env.BASE_URL,
+    env: process.env.ENV,
+  },
   userInterfaceStyle: 'automatic',
   plugins: [
     ...(config.plugins || []),

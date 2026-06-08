@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   Modal,
   Platform,
@@ -12,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { TextInput as PaperTextInput } from "react-native-paper";
+import { TextInput as PaperTextInput, Portal } from "react-native-paper";
 import { fonts } from "../../constants/fonts";
 import { useTheme } from "../../context/ThemeContext";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -27,7 +26,13 @@ import { AppDispatch, RootState } from "../../store/store";
 import { getDeviceNameForApi } from "../../utils/getDeviceNameForApi";
 import { devError, devLog } from "../../utils/devLog";
 import { saveToken } from "../../utils/secureStorage";
-import { setSchoolData, setStudentsData, setUserData } from "../../store/reducers/AuthReducer";
+import {
+  setSchoolData,
+  setStudentsData,
+  setUserData,
+} from "../../store/reducers/AuthReducer";
+import { useCommonAlert } from "../../hooks/useCommonAlert";
+import CommonAlert from "../../components/CommonAlert";
 
 const appVersion = require("../../../package.json").version;
 
@@ -41,6 +46,8 @@ export default function LoginScreen({ navigation }: Props) {
   const scrollRef = useRef<any>(null);
   const emailInputRef = useRef<any>(null);
   const passwordInputRef = useRef<any>(null);
+
+  const { show_Alert, hideAlert, visible, alertConfig } = useCommonAlert();
 
   const dispatch = useDispatch<AppDispatch>();
   const isLoading = useSelector(
@@ -59,9 +66,11 @@ export default function LoginScreen({ navigation }: Props) {
 
   const onLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert(
+      show_Alert(
+        "error",
         "Validation",
         "Please enter both institutional email and password.",
+        1,
       );
       return;
     }
@@ -82,7 +91,7 @@ export default function LoginScreen({ navigation }: Props) {
         saveToken(result.data.token);
         dispatch(setUserData(result.data.user));
         dispatch(setSchoolData(result.data.schools));
-        dispatch(setStudentsData(result.data.students));    
+        dispatch(setStudentsData(result.data.students));
         Keyboard.dismiss();
         setTimeout(() => {
           scrollRef.current?.scrollToPosition?.(0, 0, true);
@@ -92,7 +101,8 @@ export default function LoginScreen({ navigation }: Props) {
       // navigation.navigate("AuthenticationScreen");
     } catch (error) {
       devError("error", error);
-      Alert.alert("Error", error.message);
+      show_Alert("error", "Error", error.message, 1);
+      return;
     }
   };
 
@@ -300,6 +310,23 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
         </KeyboardAwareScrollView>
       </SafeAreaView>
+
+      <Portal>
+        {alertConfig && (
+          <CommonAlert
+            visible={visible}
+            type={alertConfig.type}
+            title={alertConfig.title}
+            message={alertConfig.message}
+            buttons={alertConfig.buttons}
+            positiveButtonText={alertConfig.positiveButtonText}
+            negativeButtonText={alertConfig.negativeButtonText}
+            onPositivePress={alertConfig.onPositivePress}
+            onNegativePress={alertConfig.onNegativePress}
+            onClose={hideAlert}
+          />
+        )}
+      </Portal>
     </>
   );
 }

@@ -20,6 +20,14 @@ export const CALENDAR_EVENT_TYPES: CalendarEventType[] = [
   "other",
 ];
 
+/** Category tag from API — e.g. Public, Religious, Bank. */
+export interface CalendarEventCategory {
+  value: string;
+  label: string;
+  color?: string | null;
+  icon?: string | null;
+}
+
 /** API event — single-day uses `date`; multi-day uses `date_from` / `date_to`. */
 export interface CalendarEvent {
   id: number;
@@ -37,7 +45,7 @@ export interface CalendarEvent {
   color?: string | null;
   icon?: string | null;
   closes_school?: boolean;
-  category?: string | null;
+  category?: CalendarEventCategory[] | null;
 }
 
 export interface CalendarMeta {

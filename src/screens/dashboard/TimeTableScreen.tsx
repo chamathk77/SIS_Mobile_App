@@ -1,6 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,14 +12,16 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { fonts } from "../../constants/fonts";
-import { RootState } from "../../store/store";
-import { DUMMY_TIMETABLE } from "../../data/dummyTimetableData";
+import { AppDispatch, RootState } from "../../store/store";
+import { GetTimetable_Service } from "../../services/TimetableService";
 import { DayOfWeek, TimetableSlot } from "../../type/timetable";
 import {
+  addWeeks,
   formatDayFull,
   formatDayShort,
   formatPeriodTime,
@@ -25,31 +30,114 @@ import {
   getDaysWithSlots,
   getSlotsForDay,
   getSubjectColor,
+  getWeekStartMonday,
+  getWeekWindowFromWeekOf,
+  toDateKey,
 } from "../../utils/timetableHelpers";
+import { financeStyles } from "./finance/financeStyles";
 
 export default function TimeTableScreen() {
   const { paperTheme, resolvedTheme } = useTheme();
+  const dispatch = useDispatch<AppDispatch>();
 
   const selectedStudentId = useSelector(
     (state: RootState) => state.StudentDataReducer.SelectStudent.selectedStudentId,
   );
-
-  const timetable = DUMMY_TIMETABLE;
-  const showTimetable = Boolean(selectedStudentId?.trim()) || true;
-
-  const availableDays = useMemo(() => getDaysWithSlots(timetable), [timetable]);
-  const [selectedDay, setSelectedDay] = useState<DayOfWeek>(
-    availableDays[0] ?? "monday",
+  const timetablePayload = useSelector(
+    (state: RootState) => state.TimetableReducer.data,
+  );
+  const isLoading = useSelector(
+    (state: RootState) => state.TimetableReducer.loading,
+  );
+  const timetableError = useSelector(
+    (state: RootState) => state.TimetableReducer.error,
   );
 
+  const hasStudent = Boolean(selectedStudentId?.trim());
+  const timetable = timetablePayload?.data ?? null;
+
+  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
+    getWeekStartMonday(new Date()),
+  );
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek>("monday");
+
+  const weekRange = useMemo(
+    () => getWeekWindowFromWeekOf(toDateKey(currentWeekStart)),
+    [currentWeekStart],
+  );
+
+  const fetchTimetable = useCallback(async () => {
+    const id = selectedStudentId?.trim();
+    if (!id) {
+      return;
+    }
+
+    try {
+      const response = await dispatch(
+        GetTimetable_Service({
+          student_id: String(id),
+          from: weekRange.from,
+          to: weekRange.to,
+        }),
+      ).unwrap();
+      console.log("response get timetable", JSON.stringify(response, null, 2));
+    } catch {
+      // Error stored in TimetableReducer
+    }
+  }, [dispatch, selectedStudentId, weekRange.from, weekRange.to]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (selectedStudentId?.trim()) {
+        void fetchTimetable();
+      }
+    }, [selectedStudentId, fetchTimetable]),
+  );
+
+  useEffect(() => {
+    if (hasStudent) {
+      void fetchTimetable();
+    }
+  }, [weekRange.from, weekRange.to, hasStudent, fetchTimetable]);
+
+  const availableDays = useMemo(
+    () => (timetable ? getDaysWithSlots(timetable) : []),
+    [timetable],
+  );
+
+  useEffect(() => {
+    if (availableDays.length === 0) {
+      return;
+    }
+    if (!availableDays.includes(selectedDay)) {
+      setSelectedDay(availableDays[0]);
+    }
+  }, [availableDays, selectedDay]);
+
   const daySlots = useMemo(
-    () => getSlotsForDay(timetable, selectedDay),
+    () => (timetable ? getSlotsForDay(timetable, selectedDay) : []),
     [timetable, selectedDay],
   );
 
-  const specificOverrides = timetable.specific.filter(
+  const specificOverrides = timetable?.specific.filter(
     (slot) => slot.day_of_week === selectedDay,
-  );
+  ) ?? [];
+
+  const classMeta = [
+    timetable?.class.code,
+    timetable?.class.grade,
+    timetable?.class.academic_year,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const handlePrevWeek = () => {
+    setCurrentWeekStart((prev) => addWeeks(prev, -1));
+  };
+
+  const handleNextWeek = () => {
+    setCurrentWeekStart((prev) => addWeeks(prev, 1));
+  };
 
   function renderSlot(slot: TimetableSlot) {
     const isBreak = slot.period.is_break;
@@ -210,7 +298,19 @@ export default function TimeTableScreen() {
   }
 
   return (
-    <SafeAreaView
+    <>
+      <Modal
+        visible={isLoading && !timetable}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={financeStyles.loadingOverlay}>
+          <ActivityIndicator size="large" color={paperTheme.colors.primary} />
+        </View>
+      </Modal>
+
+      <SafeAreaView
       style={[styles.safeArea, { backgroundColor: paperTheme.colors.background }]}
       edges={["top"]}
     >
@@ -223,18 +323,38 @@ export default function TimeTableScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading && Boolean(timetable)}
+            onRefresh={() => void fetchTimetable()}
+            tintColor={paperTheme.colors.primary}
+          />
+        }
       >
         <Text style={[styles.screenTitle, { color: paperTheme.colors.onSurface }]}>
           Timetable
         </Text>
 
-        {!showTimetable ? (
+        {!hasStudent ? (
           <Text
             style={[styles.hintText, { color: paperTheme.colors.onSurfaceVariant }]}
           >
             Select a student to view timetable.
           </Text>
-        ) : (
+        ) : !timetable && timetableError ? (
+          <View
+            style={[
+              styles.emptyCard,
+              { backgroundColor: paperTheme.colors.surfaceVariant },
+            ]}
+          >
+            <Text
+              style={[styles.emptyText, { color: paperTheme.colors.onSurfaceVariant }]}
+            >
+              {timetableError}
+            </Text>
+          </View>
+        ) : timetable ? (
           <>
             <View
               style={[
@@ -254,15 +374,16 @@ export default function TimeTableScreen() {
                 >
                   {timetable.class.name}
                 </Text>
-                <Text
-                  style={[
-                    styles.classMeta,
-                    { color: paperTheme.colors.onPrimaryContainer },
-                  ]}
-                >
-                  {timetable.class.code} · {timetable.class.grade} ·{" "}
-                  {timetable.class.academic_year}
-                </Text>
+                {classMeta ? (
+                  <Text
+                    style={[
+                      styles.classMeta,
+                      { color: paperTheme.colors.onPrimaryContainer },
+                    ]}
+                  >
+                    {classMeta}
+                  </Text>
+                ) : null}
               </View>
               <View
                 style={[
@@ -287,16 +408,45 @@ export default function TimeTableScreen() {
                 },
               ]}
             >
-              <Ionicons
-                name="calendar-outline"
-                size={18}
-                color={paperTheme.colors.primary}
-              />
-              <Text
-                style={[styles.windowText, { color: paperTheme.colors.onSurface }]}
+              <TouchableOpacity
+                style={styles.weekArrow}
+                onPress={handlePrevWeek}
+                activeOpacity={0.85}
+                accessibilityLabel="Previous week"
               >
-                Week of {formatTimetableWindow(timetable.window.from, timetable.window.to)}
-              </Text>
+                <Ionicons
+                  name="chevron-back"
+                  size={22}
+                  color={paperTheme.colors.onSurface}
+                />
+              </TouchableOpacity>
+
+              <View style={styles.weekLabelWrap}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={18}
+                  color={paperTheme.colors.primary}
+                />
+                <Text
+                  style={[styles.windowText, { color: paperTheme.colors.onSurface }]}
+                >
+                  Week of{" "}
+                  {formatTimetableWindow(weekRange.from, weekRange.to)}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.weekArrow}
+                onPress={handleNextWeek}
+                activeOpacity={0.85}
+                accessibilityLabel="Next week"
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={22}
+                  color={paperTheme.colors.onSurface}
+                />
+              </TouchableOpacity>
             </View>
 
             <ScrollView
@@ -446,9 +596,10 @@ export default function TimeTableScreen() {
               </View>
             ) : null}
           </>
-        )}
+        ) : null}
       </ScrollView>
     </SafeAreaView>
+    </>
   );
 }
 
@@ -504,18 +655,32 @@ const styles = StyleSheet.create({
   windowCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     marginBottom: 16,
   },
-  windowText: {
+  weekArrow: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  weekLabelWrap: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 4,
+  },
+  windowText: {
+    flexShrink: 1,
     fontFamily: fonts.PoppinsMedium,
     fontSize: 13,
     lineHeight: 18,
+    textAlign: "center",
   },
   dayRow: {
     gap: 8,

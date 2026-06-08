@@ -30,9 +30,9 @@ export interface TimetableTeacher {
 export interface TimetableClass {
   id: number;
   name: string;
-  code: string;
-  grade: string;
-  academic_year: string;
+  code?: string;
+  grade?: string;
+  academic_year?: string;
 }
 
 export interface TimetableWindow {
@@ -52,15 +52,21 @@ export interface TimetableSlot {
 }
 
 export interface TimetableData {
-  student_id: number;
   class: TimetableClass;
   window: TimetableWindow;
+  week_of?: string;
   recurring: TimetableSlot[];
   specific: TimetableSlot[];
 }
 
+export interface GetTimetable_Request {
+  student_id: string;
+  from: string;
+  to: string;
+}
+
 export interface GetTimetable_Response {
-  success: boolean;
-  message: string;
+  success?: boolean;
+  message?: string;
   data: TimetableData;
 }

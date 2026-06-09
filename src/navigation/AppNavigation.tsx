@@ -15,6 +15,7 @@ import SettingsScreen from '../screens/dashboard/sidebar/settings/SettingsScreen
 import ChangePasswordScreen from '../screens/dashboard/sidebar/settings/ChangePasswordScreen';
 import ParentProfileScreen from '../screens/dashboard/sidebar/ParentProfileScreen';
 import StudentProfileScreen from '../screens/dashboard/sidebar/StudentProfileScreen';
+import NoticeScreen from '../screens/dashboard/NoticeScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -35,6 +36,7 @@ export default function AppNavigator() {
         <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
         <Stack.Screen name="ParentProfileScreen" component={ParentProfileScreen} />
         <Stack.Screen name="StudentProfileScreen" component={StudentProfileScreen} />
+        <Stack.Screen name="NoticeScreen" component={NoticeScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

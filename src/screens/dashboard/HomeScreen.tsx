@@ -39,6 +39,7 @@ import {
 import { useCommonAlert } from "../../hooks/useCommonAlert";
 import CommonAlert from "../../components/CommonAlert";
 import { DUMMY_DASHBOARD } from "../../data/dummyDashboardData";
+import { DUMMY_NOTICES_RESPONSE } from "../../data/dummyNoticeData";
 import {
   formatCalendarDate,
   formatDashboardAmount,
@@ -146,6 +147,7 @@ export default function HomeScreen() {
 
   const { alertConfig, visible, hideAlert, show_Alert } = useCommonAlert();
   const dashboard = DUMMY_DASHBOARD;
+  const noticeSummary = DUMMY_NOTICES_RESPONSE.data;
 
   const selectStudentData = useSelector(
     (state: RootState) => state.StudentDataReducer.SelectStudent.data,
@@ -248,6 +250,19 @@ export default function HomeScreen() {
         schoolName={schoolName}
         onGoBack={oneGoBack}
         onOpenMenu={() => setMenuVisible(true)}
+        onOpenNotifications={() =>
+          show_Alert(
+            "pending",
+            "Notifications",
+            "Push notifications will be available in a future update.",
+            1,
+            false,
+            "OK",
+            () => {},
+          )
+        }
+        onOpenNotices={() => navigation.navigate("NoticeScreen")}
+        noticeUnreadCount={noticeSummary.unread_count}
         paperTheme={paperTheme}
       />
 

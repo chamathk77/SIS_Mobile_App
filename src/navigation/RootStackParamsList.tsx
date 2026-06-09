@@ -15,4 +15,5 @@ export type RootStackParamList = {
   ChangePasswordScreen: undefined;
   ParentProfileScreen: undefined;
   StudentProfileScreen: undefined;
+  NoticeScreen: undefined;
 };
